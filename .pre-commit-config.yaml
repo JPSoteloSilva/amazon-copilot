@@ -1,0 +1,33 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.5
+    hooks:
+      - id: ruff
+        args: [--fix]
+        exclude: ^research/
+      - id: ruff-format
+        exclude: ^research/
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.7.0
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          - types-requests
+        args: [--ignore-missing-imports]
+        files: ^src/
+        exclude: ^research/
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^research/
+      - id: end-of-file-fixer
+        exclude: ^research/
+      - id: check-yaml
+        exclude: ^research/
+      - id: check-added-large-files
+        exclude: ^research/
+      - id: check-toml
+        exclude: ^research/ 
