@@ -26,21 +26,32 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# VS Code
-.vscode/
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
 
-# PyCharm
-.idea/
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
 
-# Ruff
-.ruff_cache/
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
 
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Environment
+# Environments
 .env
 .venv
 env/
@@ -48,18 +59,34 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-.uv/
 
-# Database
-*.db
-*.sqlite3
+# Development
+.mypy_cache/
+.ruff_cache/
+.DS_Store
+.vscode/
+
+# Project specific
+qdrant_storage/
+data/*
+!data/.gitkeep
+
+# VS Code
+.vscode/
+
+# PyCharm
+.idea/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
 
 # Logs
 logs/
 *.log
 
 # OS specific files
-.DS_Store
 Thumbs.db
 
 # Database
@@ -72,4 +99,3 @@ Thumbs.db
 *.jsonl.gz
 *.jsonl.bz2
 *.jsonl.zip
-data/
