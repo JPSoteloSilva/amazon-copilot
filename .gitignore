@@ -64,15 +64,11 @@ venv.bak/
 .mypy_cache/
 .ruff_cache/
 .DS_Store
-.vscode/
 
 # Project specific
 qdrant_storage/
 data/*
 !data/.gitkeep
-
-# VS Code
-.vscode/
 
 # PyCharm
 .idea/
@@ -99,3 +95,6 @@ Thumbs.db
 *.jsonl.gz
 *.jsonl.bz2
 *.jsonl.zip
+
+# LaTeX
+out/

@@ -1,0 +1,102 @@
+\documentclass[12pt]{article}
+
+\usepackage{url}
+\usepackage{geometry}
+\geometry{a4paper}
+\usepackage{microtype}
+
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+\usepackage{float}
+\usepackage{wrapfig}
+\usepackage{listings}
+\usepackage{multirow}
+
+\usepackage{enumitem}
+
+%para escribir en español
+\usepackage[utf8x]{inputenc}
+\usepackage[spanish]{babel}
+
+\renewcommand{\contentsname}{Índice}
+\renewcommand{\refname}{Referencias}
+\renewcommand{\figurename}{Figura}
+
+\usepackage[nottoc,numbib]{tocbibind}
+
+\linespread{1.2}
+
+\graphicspath{{./figures/}} % Specifies the directory where pictures are stored
+
+\begin{document}
+
+\begin{titlepage}
+
+    \center
+
+    \textsc{\LARGE Universidad de la República}\\[1.5cm]
+    \textsc{\Large Facultad de Ingeniería}\\[1.0cm]
+    \textsc{\large Recuperación de Información y Recomendaciones en la Web}\\[0.5cm]
+
+    \rule{\linewidth}{0.5mm} \\[1cm]
+    {\huge \bfseries Amazon Copilot}\\[0.5cm]
+    \rule{\linewidth}{0.5mm} \\[1.5cm]
+
+    \begin{minipage}{0.4\textwidth}
+        \begin{flushleft} \large
+            \emph{Autores:}\\
+            Juan Pablo Conde\\
+            Xavier Iribarnegaray\\
+            Juan Pablo Sotelo\\
+        \end{flushleft}
+    \end{minipage}
+    ~
+    \begin{minipage}{0.4\textwidth}
+        \begin{flushright} \large
+            \emph{Profesores:} \\
+            Libertad Tansini \\
+        \end{flushright}
+    \end{minipage}\\[2cm]
+
+    {\large \today}\\[1.5cm]
+
+    \includegraphics[width=0.4\textwidth]{fing-logo}\\[1cm]
+
+    \vfill
+
+\end{titlepage}
+
+
+\pagenumbering{arabic}
+
+\tableofcontents
+
+\newpage
+
+\section{Introducción}
+En este documento presentamos la propuesta para Amazon Copilot, un proyecto que buscará facilitar la búsqueda y selección de productos en plataformas de e-commerce. Nuestro sistema planea utilizar un dataset de productos de Amazon para implementar tres funcionalidades clave:
+
+\begin{itemize}
+    \item \textbf{Búsqueda híbrida de productos:} Combinaremos búsqueda semántica y técnicas de text matching tradicionales para ofrecer resultados más relevantes a las consultas de los usuarios.
+
+    \item \textbf{AI Agent:} Un asistente conversacional que utilizará las capacidades
+          de búsqueda implementadas y podrá refinar los requerimientos del usuario mediante
+          diálogo natural.
+
+    \item \textbf{Sistema de recomendación:} Ofrecerá sugerencias de productos relacionados con los ítems seleccionados en el carrito de compras.
+\end{itemize}
+
+El proyecto integrará técnicas modernas de procesamiento de lenguaje natural, recuperación de información y sistemas de recomendación para crear una experiencia de usuario fluida y personalizada.
+
+\newpage
+\section{Arquitectura del Sistema}
+
+\section{Funcionalidades}
+
+\section{Implementación Técnica}
+
+\section{Referencias}
+
+\end{document}
