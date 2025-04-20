@@ -11,4 +11,4 @@ RUN pip install --no-cache-dir pip-tools uv && \
     pip install -e .
 
 # Run the application
-CMD ["python", "-m", "amazon_copilot.data_loader"]
+CMD ["python", "-m", "amazon_copilot.data_loader", "--nrows", "10000"]
