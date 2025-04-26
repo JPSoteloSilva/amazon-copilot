@@ -1,4 +1,19 @@
 {
-    "latex-workshop.latex.outDir": "%DIR%/out",
-    "latex-workshop.formatting.latex": "latexindent",
-}
+    //
+    // Editor settings
+    //
+    "editor.formatOnSave": true,
+    "editor.rulers": [88],
+    "editor.wordWrapColumn": 88,
+    //
+    // Python settings
+    //
+    "[python]": {
+      "editor.defaultFormatter": "charliermarsh.ruff",
+      "editor.codeActionsOnSave": {
+        "source.fixAll": "always"
+      }
+    },
+    "python.analysis.typeCheckingMode": "basic", // mypy
+    "python.languageServer": "Pylance"
+  }
