@@ -13,6 +13,7 @@
 \usepackage{wrapfig}
 \usepackage{listings}
 \usepackage{multirow}
+\usepackage{hyperref}
 
 \usepackage{enumitem}
 
@@ -76,36 +77,141 @@
 \newpage
 
 \section{Introducción}
-En este documento presentamos la propuesta para Amazon Copilot, un proyecto que buscará facilitar la búsqueda y selección de productos en plataformas de e-commerce. Nuestro sistema planea utilizar un dataset de productos de Amazon para implementar tres funcionalidades clave:
+Amazon Copilot será un sistema diseñado para facilitar la búsqueda y selección de productos en plataformas de e-commerce. Aprovechando un dataset de productos de Amazon, nuestro sistema implementará técnicas avanzadas de recuperación de información y procesamiento de lenguaje natural para crear una experiencia de compra intuitiva y personalizada.
 
-\begin{itemize}
-    \item \textbf{Búsqueda híbrida de productos:} Combinaremos búsqueda semántica y técnicas de text matching tradicionales para ofrecer resultados más relevantes a las consultas de los usuarios.
+El proyecto integrará tres funcionalidades principales: un sistema de búsqueda híbrido que combinará técnicas semánticas y tradicionales para ofrecer resultados más relevantes a los usuarios; un asistente conversacional (AI Agent) que proporcionará una interfaz de búsqueda interactiva y conversacional, refinando requerimientos mediante diálogo natural y utilizando como herramienta subyacente el sistema de búsqueda híbrido implementado; y un sistema de recomendación que, basándose en los productos seleccionados en el carrito, empleará el mismo agente para identificar artículos similares o complementarios, mejorando así la experiencia de descubrimiento de productos.
 
-    \item \textbf{AI Agent:} Un asistente conversacional que utilizará las capacidades
-          de búsqueda implementadas y podrá refinar los requerimientos del usuario mediante
-          diálogo natural.
+\section{Funcionalidades del Sistema}
 
-    \item \textbf{Sistema de recomendación:} Ofrecerá sugerencias de productos relacionados con los ítems seleccionados en el carrito de compras.
-\end{itemize}
+En esta sección presentaremos las tres principales funcionalidades que se implementarán en Amazon Copilot.
 
-El proyecto integrará técnicas modernas de procesamiento de lenguaje natural, recuperación de información y sistemas de recomendación para crear una experiencia de usuario fluida y personalizada.
+\subsection{Búsqueda Híbrida de Productos}
 
-\subsection{Marco Teórico}
+Este componente combinará técnicas de búsqueda semántica con métodos tradicionales de text matching para optimizar resultados. Incorporará embeddings semánticos para capturar el significado contextual de las consultas, mantendrá búsqueda por términos exactos para consultas específicas e implementará filtrado por categorías. El sistema ordenará los resultados mediante un modelo que ponderará tanto la relevancia semántica como la coincidencia sintáctica tradicional, logrando un balance óptimo que aprovechará las fortalezas de ambos enfoques para mostrar los productos más pertinentes al usuario.
 
-\subsubsection{Conceptos del curso utilizados:}
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam in dui mauris. Vivamus hendrerit arcu sed erat molestie vehicula. Sed auctor neque eu tellus rhoncus ut eleifend nibh porttitor. Ut in nulla enim. Phasellus molestie magna non est bibendum non venenatis nisl tempor. Suspendisse dictum feugiat nisl ut dapibus. Mauris iaculis porttitor posuere.
+\subsection{Búsqueda Conversacional con AI Agent}
 
-\subsubsection{Conceptos fuera del curso utilizados:}
-Cras malesuada ultrices augue molestie risus. Vestibulum congue semper purus, nec ornare nulla faucibus eget. Curabitur vitae congue leo. Pellentesque eget dictum risus. Sed consequat sollicitudin nunc, sed ultricies eros suscipit sit amet. 
+El asistente conversacional proporcionará una interfaz de búsqueda interactiva en lenguaje natural. Este agente mantendrá el contexto durante la conversación, refinará progresivamente los requerimientos del usuario mediante preguntas específicas, y utilizará la API de búsqueda híbrida como herramienta subyacente para ofrecer resultados personalizados. Resultará especialmente útil para usuarios sin conocimientos específicos sobre lo que buscan.
+
+\subsection{Sistema de Recomendación con AI Agent}
+
+Este sistema analizará los productos seleccionados en el carrito para sugerir artículos complementarios o alternativos. Operará automáticamente al visualizar el carrito, generando recomendaciones basadas en productos frecuentemente comprados juntos y alternativas similares. Presentará explicaciones concisas sobre cada recomendación y adaptará las sugerencias dinámicamente según el contenido del carrito.
+
 \newpage
+
 \section{Arquitectura del Sistema}
 
-\section{Funcionalidades}
+Esta sección describirá los componentes principales del sistema, sus responsabilidades e interacciones, así como las tecnologías propuestas para su implementación.
 
-\section{Implementación Técnica}
+\vspace{1cm}
 
-% \section{Testing}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{architecture.png}
+    \caption{Diagrama de alto nivel de la arquitectura del sistema.}
+    \label{fig:system_architecture}
+\end{figure}
 
-\section{Referencias}
+\subsection{Web}
+
+Este módulo definirá la interfaz gráfica y las interacciones del usuario con el sistema (UI/UX), constituyendo el frontend de la aplicación. A través de esta capa, los usuarios podrán acceder a todas las funcionalidades del sistema de manera intuitiva y eficiente.
+
+\subsubsection{Diseño UX}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{ux.png}
+    \caption{Diseño UX de la interfaz web.}
+    \label{fig:ux_design}
+\end{figure}
+
+\noindent \textit{Nota: Este diagrama modela las interacciones del usuario con el sistema. El diseño final de la interfaz de usuario está por desarrollarse.}
+
+\vspace{0.75cm}
+
+La interfaz permitirá al usuario: visualizar un listado inicial de productos con barra de búsqueda y filtros por categorías; realizar búsquedas que actualicen dinámicamente los resultados; acceder a detalles de productos específicos; gestionar un carrito de compras que mostrará recomendaciones relacionadas; e interactuar con el chatbot para búsquedas conversacionales, manteniendo el historial de la conversación.
+
+\subsubsection{Implementación}
+
+Dado que el objetivo principal del proyecto se centra en la funcionalidad de búsqueda y en el desarrollo del AI Agent, para el frontend adoptaremos la técnica de ``Vibe Coding'', utilizando herramientas como \href{https://www.cursor.com}{Cursor}~\cite{Cursor} y \href{https://replit.com}{Replit}~\cite{Replit}.
+
+\begin{quote}
+    ``There's a new kind of coding I call 'vibe coding', where you fully give in to the vibes, embrace exponentials, and forget that the code even exists. It's possible because the LLMs (e.g. Cursor Composer w Sonnet) are getting too good. [...] I'm building a project or webapp, but it's not really coding - I just see stuff, say stuff, run stuff, and copy paste stuff, and it mostly works.''
+\end{quote}
+
+\textit{Andrej Karpathy, \href{https://x.com/karpathy/status/1886192184808149383}{X}}~\cite{Karpathy}
+
+\vspace{0.5cm}
+
+Esta filosofía de desarrollo, asistida por modelos de lenguaje avanzados, nos permitirá iterar rápidamente sobre prototipos funcionales, concentrando nuestros esfuerzos técnicos en los componentes de búsqueda, recomendación e inteligencia artificial que constituyen el verdadero valor del proyecto.
+
+\subsection{API}
+
+Este componente constituirá la capa de servicios que comunicará el frontend con los distintos motores de búsqueda y recomendación. Incluirá endpoints para listar productos (recibiendo parámetros de filtros y búsqueda) y para obtener información detallada de productos específicos.
+
+\subsubsection{Implementación}
+
+La API será implementada utilizando \href{https://fastapi.tiangolo.com/}{FastAPI}~\cite{FastAPI}, un framework moderno de Python que permitirá un desarrollo rápido y robusto. FastAPI ofrece validación automática de datos mediante \href{https://docs.pydantic.dev/latest/}{Pydantic}~\cite{Pydantic}, tipado fuerte que reduce errores en tiempo de desarrollo, y generación automática de documentación con OpenAPI y Swagger UI. Esta documentación servirá como recurso valioso para la fase de desarrollo del frontend, pudiendo ser utilizada como contexto para los modelos de lenguaje que asistirán en la implementación de la interfaz de usuario.
+
+\subsection{AI Agent}
+
+Este componente implementará la funcionalidad conversacional y de recomendación del sistema utilizando \href{https://www.langchain.com/langgraph}{LangGraph}~\cite{LangGraph} y los modelos generativos de \href{https://openai.com/}{OpenAI}~\cite{OpenAI}. Utilizará la API como herramienta para acceder a la búsqueda híbrida, permitiendo una arquitectura donde el diálogo con el usuario y la obtención de información están claramente separados.
+
+Para mantener el contexto de las interacciones, el sistema se integrará con una base de datos que almacenará el historial de conversaciones, permitiendo referencias a consultas anteriores y facilitando la personalización progresiva de las respuestas.
+
+\subsection{Qdrant}
+
+Este módulo constituirá el núcleo del sistema de búsqueda vectorial. Se compone de:
+
+\begin{itemize}
+    \item \textbf{Base de datos vectorial}: Almacenará productos y sus representaciones vectoriales (embeddings densos y sparse), permitiendo búsquedas por similitud y coincidencia exacta.
+
+    \item \textbf{Cliente de acceso}: Componente que gestionará las operaciones de indexación y consulta a la base de datos. Implementará búsqueda híbrida siguiendo las prácticas recomendadas por \href{https://qdrant.tech/documentation/search-precision/reranking-hybrid-search/}{Qdrant}~\cite{Qdrant}, combinando embeddings densos (para capturar significado semántico) y sparse (para coincidencias textuales precisas), permitiendo así obtener resultados relevantes tanto para consultas conceptuales como específicas.
+\end{itemize}
+
+La separación de este módulo facilita adaptaciones futuras, permitiendo reemplazar modelos de embeddings o migrar a soluciones alternativas sin impactar al resto del sistema.
+
+\subsection{Dataset}
+
+Para la información de productos, utilizaremos el dataset de Amazon disponible en \href{https://www.kaggle.com/datasets/lokeshparab/amazon-products-dataset/data?select=Amazon-Products.csv}{Kaggle}~\cite{Amazon}. Este conjunto de datos ofrece una amplia variedad de atributos por producto, incluyendo:
+
+\begin{itemize}
+    \item Título y descripción detallada
+    \item Categorías y subcategorías
+    \item Precio y disponibilidad
+    \item Valoraciones y número de reseñas
+    \item Imágenes de productos
+    \item Especificaciones técnicas
+\end{itemize}
+
+La riqueza de estos atributos nos permitirá implementar las modalidades de búsqueda previamente mencionadas.
+
+Para la carga inicial del dataset, desarrollaremos un módulo loader consistente en scripts de Python que procesarán el CSV, transformarán los datos en el formato requerido y utilizarán la funcionalidad de almacenamiento del cliente de Qdrant para indexar cada producto.
+
+\newpage
+
+\begin{thebibliography}{2}
+    \raggedright
+
+    \bibitem{Cursor}Cursor. (2024). \textit{Cursor: The AI-first code editor}. \url{https://www.cursor.com}
+
+    \bibitem{Replit}Replit. (2024). \textit{Replit: The collaborative browser based IDE}. \url{https://replit.com}
+
+    \bibitem{Karpathy}Karpathy, A. (2023, 11 noviembre). \textit{Tweet sobre "vibe coding"}. X. \url{https://x.com/karpathy/status/1886192184808149383}
+
+    \bibitem{FastAPI}FastAPI. (2024). \textit{FastAPI: Framework web de alto rendimiento para APIs con Python}. \url{https://fastapi.tiangolo.com}
+
+    \bibitem{Pydantic}Pydantic. (2024). \textit{Pydantic: Validación de datos para Python}. \url{https://docs.pydantic.dev/latest}
+
+    \bibitem{LangGraph}LangGraph. (2024). \textit{LangGraph: Orchestration framework for building stateful, multi-actor applications with LLMs}. \url{https://www.langchain.com/langgraph}
+
+    \bibitem{OpenAI}OpenAI. (2024). \textit{OpenAI: Creating safe AI that benefits humanity}. \url{https://openai.com}
+
+    \bibitem{Qdrant}Qdrant. (2024). \textit{Qdrant: Vector Database}. \url{https://qdrant.tech/documentation/search-precision/reranking-hybrid-search}
+
+    \bibitem{Amazon}Parab, L. (2023). \textit{Amazon Products Dataset}. Kaggle. \url{https://www.kaggle.com/datasets/lokeshparab/amazon-products-dataset/data?select=Amazon-Products.csv}
+
+\end{thebibliography}
+
 
 \end{document}
