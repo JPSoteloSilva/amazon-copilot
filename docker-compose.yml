@@ -15,21 +15,6 @@ services:
     healthcheck:
       disable: true
 
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    depends_on:
-      - qdrant
-    environment:
-      - QDRANT_HOST=qdrant
-      - QDRANT_PORT=6333
-    volumes:
-      - ./data:/app/data
-      - ./src:/app/src
-    networks:
-      - app_network
-
 volumes:
   qdrant_data:
     driver: local
