@@ -28,8 +28,6 @@ class QdrantClient:
             late_interaction_embedding_name: Name of the late interaction embedding
                 model.
         """
-        self.host = host
-        self.port = port
         self.dense_model_name = dense_model_name
         self.sparse_model_name = sparse_model_name
         self.late_interaction_model_name = late_interaction_model_name
@@ -60,8 +58,8 @@ class QdrantClient:
 
         # Initialize the Qdrant client
         self.client = QdrantAPI(
-            host=self.host,
-            port=self.port,
+            host=host,
+            port=port,
         )
 
     def create_collection(
