@@ -3,7 +3,7 @@ import start_research
 import pandas as pd
 import re
 
-from src.amazon_copilot.schemas import Product
+from amazon_copilot.shared.schemas import Product
 
 # %%
 df = pd.read_csv("data/Amazon-Products.csv")
@@ -78,7 +78,7 @@ import pandas as pd
 from amazon_copilot.database import QdrantService
 from amazon_copilot.models import AmazonProduct
 
-from amazon_copilot.schemas import DenseEmbedding, SparseEmbedding, LateInteractionEmbedding, Product
+from amazon_copilot.shared.schemas import DenseEmbedding, SparseEmbedding, LateInteractionEmbedding, Product
 
 
 

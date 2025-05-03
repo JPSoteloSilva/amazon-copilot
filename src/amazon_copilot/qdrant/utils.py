@@ -3,7 +3,7 @@ import re
 import numpy as np
 import pandas as pd
 
-from amazon_copilot.schemas import Product
+from amazon_copilot.shared.schemas import Product
 
 
 def convert_ratings_count(value: str | int) -> int:
