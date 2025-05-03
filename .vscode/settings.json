@@ -15,5 +15,10 @@
       }
     },
     "python.analysis.typeCheckingMode": "basic", // mypy
-    "python.languageServer": "Pylance"
+    "python.languageServer": "Pylance",
+
+    //
+    // LaTeX settings
+    //
+    "latex-workshop.latex.outDir": "%DIR%/out"
   }
