@@ -1,7 +1,8 @@
-from fastembed import LateInteractionTextEmbedding, TextEmbedding
+from fastembed import SparseTextEmbedding, TextEmbedding
 from qdrant_client import QdrantClient as QdrantAPI
 from qdrant_client import models
 from qdrant_client.http.models import CollectionInfo
+from tqdm import tqdm
 
 from amazon_copilot.shared.schemas import Product, ProductResponse
 
@@ -15,7 +16,6 @@ class QdrantClient:
         port: int,
         dense_model_name: str,
         sparse_model_name: str,
-        late_interaction_model_name: str,
     ) -> None:
         """Initialize the QdrantClient.
 
@@ -25,36 +25,22 @@ class QdrantClient:
             api_key: Qdrant API key.
             dense_embedding_name: Name of the dense embedding model.
             sparse_embedding_name: Name of the sparse embedding model.
-            late_interaction_embedding_name: Name of the late interaction embedding
-                model.
         """
         self.dense_model_name = dense_model_name
         self.sparse_model_name = sparse_model_name
-        self.late_interaction_model_name = late_interaction_model_name
+
+        self.dense_embedder = TextEmbedding(self.dense_model_name)
+        self.sparse_embedder = SparseTextEmbedding(self.sparse_model_name)
 
         self.sparse_model_field_name = self.sparse_model_name.split("/")[-1]
         self.dense_model_field_name = self.dense_model_name.split("/")[-1]
-        self.late_interaction_model_field_name = self.late_interaction_model_name.split(
-            "/"
-        )[-1]
 
         list_of_dense_models = TextEmbedding.list_supported_models()
-        list_of_late_interaction_models = (
-            LateInteractionTextEmbedding.list_supported_models()
-        )
         for model in list_of_dense_models:
             if model["model"] == self.dense_model_name:
                 self.dense_model_dim = model["dim"]
         if self.dense_model_dim is None:
             raise ValueError(f"Dense model {self.dense_model_name} not found")
-
-        for model in list_of_late_interaction_models:
-            if model["model"] == self.late_interaction_model_name:
-                self.late_interaction_model_dim = model["dim"]
-        if self.late_interaction_model_dim is None:
-            raise ValueError(
-                f"Late interaction model {self.late_interaction_model_name} not found"
-            )
 
         # Initialize the Qdrant client
         self.client = QdrantAPI(
@@ -79,13 +65,6 @@ class QdrantClient:
             self.dense_model_field_name: models.VectorParams(
                 size=self.dense_model_dim,
                 distance=models.Distance.COSINE,
-            ),
-            self.late_interaction_model_field_name: models.VectorParams(
-                size=self.late_interaction_model_dim,
-                distance=models.Distance.COSINE,
-                multivector_config=models.MultiVectorConfig(
-                    comparator=models.MultiVectorComparator.MAX_SIM,
-                ),
             ),
         }
 
@@ -124,45 +103,30 @@ class QdrantClient:
         """
         successful_adds = 0
 
-        # Process products in batches
-        for i in range(0, len(products), batch_size):
+        for i in tqdm(range(0, len(products), batch_size)):
             batch = products[i : i + batch_size]
-            points = []
+            names = [p.name for p in batch]
 
-            for product in batch:
-                try:
-                    # Add point to the batch
-                    point = models.PointStruct(
+            dense_vecs = list(self.dense_embedder.embed(names))
+            sparse_vecs = list(self.sparse_embedder.embed(names))
+
+            points = []
+            for product, dense_vec, sparse_vec in zip(
+                batch, dense_vecs, sparse_vecs, strict=True
+            ):
+                points.append(
+                    models.PointStruct(
                         id=product.id,
                         vector={
-                            self.dense_model_field_name: models.Document(
-                                text=product.name, model=self.dense_model_name
-                            ),
-                            self.sparse_model_field_name: models.Document(
-                                text=product.name, model=self.sparse_model_name
-                            ),
-                            self.late_interaction_model_field_name: models.Document(
-                                text=product.name,
-                                model=self.late_interaction_model_name,
-                            ),
+                            self.dense_model_field_name: dense_vec,
+                            self.sparse_model_field_name: sparse_vec.as_object(),  # type: ignore
                         },
                         payload=product.model_dump(),
                     )
-                    points.append(point)
-                    successful_adds += 1
-                except Exception as e:
-                    print(f"Failed to process product {product.id}: {e}")
+                )
 
-            # Add batch to the collection
-            if points:
-                try:
-                    self.client.upsert(
-                        collection_name=collection_name,
-                        points=points,
-                    )
-                except Exception as e:
-                    print(f"Failed to add batch: {e}")
-                    successful_adds -= len(points)
+            self.client.upsert(collection_name=collection_name, points=points)
+            successful_adds += len(points)
 
         return successful_adds
 
@@ -217,19 +181,26 @@ class QdrantClient:
             )
 
         if filters:
-            query_filter = models.Filter(must=filters)  # type: ignore
+            query_filter = models.Filter(must=filters)
         else:
             query_filter = None
 
+        # Generate embeddings for the query
+        dense_vectors = next(iter(self.dense_embedder.query_embed(query))).tolist()
+        sparse_vectors = next(iter(self.sparse_embedder.query_embed(query))).as_object()
+
         prefetch = [
             models.Prefetch(
-                query=models.Document(text=query, model=self.dense_model_name),
+                query=dense_vectors,  # type: ignore
                 using=self.dense_model_field_name,
                 limit=prefetch_limit,
                 filter=query_filter,
             ),
             models.Prefetch(
-                query=models.Document(text=query, model=self.sparse_model_name),
+                query=models.SparseVector(
+                    indices=list(sparse_vectors["indices"]),
+                    values=list(sparse_vectors["values"]),
+                ),
                 using=self.sparse_model_field_name,
                 limit=prefetch_limit,
                 filter=query_filter,
@@ -240,8 +211,7 @@ class QdrantClient:
         response = self.client.query_points(
             collection_name=collection_name,
             prefetch=prefetch,
-            query=models.Document(text=query, model=self.late_interaction_model_name),
-            using=self.late_interaction_model_field_name,
+            query=models.FusionQuery(fusion=models.Fusion.RRF),
             with_vectors=with_vectors,
             with_payload=with_payload,
             limit=limit,
@@ -249,16 +219,31 @@ class QdrantClient:
             query_filter=query_filter,
         )
 
-        results = response.points
-        if results is None:
+        if response.points is None:
             return []
-        return [
-            ProductResponse(
-                payload=Product(**result.payload),  # type: ignore
-                score=result.score,
-            )
-            for result in results
-        ]
+        else:
+            results: list[ProductResponse] = []
+            for point in response.points:
+                if point.payload is None:
+                    continue
+                results.append(
+                    ProductResponse(
+                        payload=Product(
+                            id=int(point.id),
+                            name=point.payload["name"],
+                            main_category=point.payload["main_category"],
+                            sub_category=point.payload["sub_category"],
+                            image=point.payload["image"],
+                            link=point.payload["link"],
+                            ratings=point.payload["ratings"],
+                            no_of_ratings=point.payload["no_of_ratings"],
+                            discount_price=point.payload["discount_price"],
+                            actual_price=point.payload["actual_price"],
+                        ),
+                        score=point.score,
+                    )
+                )
+            return results
 
     def get_collection_info(self, collection_name: str) -> CollectionInfo:
         """Get information about a collection.
