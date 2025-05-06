@@ -1,6 +1,8 @@
+from typing import cast
+
 from fastembed import SparseTextEmbedding, TextEmbedding
 from qdrant_client import QdrantClient as QdrantAPI
-from qdrant_client import models
+from qdrant_client.http import models
 from qdrant_client.http.models import CollectionInfo
 from tqdm import tqdm
 
@@ -22,7 +24,6 @@ class QdrantClient:
         Args:
             host: Qdrant server host.
             port: Qdrant server port.
-            api_key: Qdrant API key.
             dense_embedding_name: Name of the dense embedding model.
             sparse_embedding_name: Name of the sparse embedding model.
         """
@@ -118,7 +119,9 @@ class QdrantClient:
                     models.PointStruct(
                         id=product.id,
                         vector={
-                            self.dense_model_field_name: dense_vec,
+                            self.dense_model_field_name: cast(
+                                list[float], dense_vec.tolist()
+                            ),
                             self.sparse_model_field_name: sparse_vec.as_object(),  # type: ignore
                         },
                         payload=product.model_dump(),
@@ -163,7 +166,7 @@ class QdrantClient:
             Dictionary with results and pagination information.
         """
         # Prepare filter if categories are specified
-        filters = []
+        filters: list[models.Condition] = []
         if main_category:
             filters.append(
                 models.FieldCondition(
