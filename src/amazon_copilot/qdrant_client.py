@@ -192,8 +192,6 @@ class QdrantClient:
         else:
             query_filter = None
 
-        print(query_filter)
-
         # Generate embeddings for the query
         dense_vectors = next(iter(self.dense_embedder.query_embed(query))).tolist()
         sparse_vectors = next(iter(self.sparse_embedder.query_embed(query))).as_object()
