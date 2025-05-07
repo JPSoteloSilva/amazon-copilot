@@ -6,7 +6,7 @@ from qdrant_client.http import models
 from qdrant_client.http.models import CollectionInfo
 from tqdm import tqdm
 
-from amazon_copilot.shared.schemas import Product, ProductResponse
+from amazon_copilot.schemas import Product
 
 
 class QdrantClient:
@@ -48,6 +48,10 @@ class QdrantClient:
             host=host,
             port=port,
         )
+
+    def close(self) -> None:
+        """Close the Qdrant client."""
+        self.client.close()
 
     def create_collection(
         self,
@@ -144,7 +148,7 @@ class QdrantClient:
         prefetch_limit: int = 20,
         with_vectors: bool = False,
         with_payload: bool = True,
-    ) -> list[ProductResponse]:
+    ) -> list[Product]:
         """Search for products similar to the query using hybrid search with reranking.
 
         This implementation follows the two-stage approach:
@@ -188,6 +192,8 @@ class QdrantClient:
         else:
             query_filter = None
 
+        print(query_filter)
+
         # Generate embeddings for the query
         dense_vectors = next(iter(self.dense_embedder.query_embed(query))).tolist()
         sparse_vectors = next(iter(self.sparse_embedder.query_embed(query))).as_object()
@@ -225,25 +231,22 @@ class QdrantClient:
         if response.points is None:
             return []
         else:
-            results: list[ProductResponse] = []
+            results: list[Product] = []
             for point in response.points:
                 if point.payload is None:
                     continue
                 results.append(
-                    ProductResponse(
-                        payload=Product(
-                            id=int(point.id),
-                            name=point.payload["name"],
-                            main_category=point.payload["main_category"],
-                            sub_category=point.payload["sub_category"],
-                            image=point.payload["image"],
-                            link=point.payload["link"],
-                            ratings=point.payload["ratings"],
-                            no_of_ratings=point.payload["no_of_ratings"],
-                            discount_price=point.payload["discount_price"],
-                            actual_price=point.payload["actual_price"],
-                        ),
-                        score=point.score,
+                    Product(
+                        id=int(point.id),
+                        name=point.payload["name"],
+                        main_category=point.payload["main_category"],
+                        sub_category=point.payload["sub_category"],
+                        image=point.payload["image"],
+                        link=point.payload["link"],
+                        ratings=point.payload["ratings"],
+                        no_of_ratings=point.payload["no_of_ratings"],
+                        discount_price=point.payload["discount_price"],
+                        actual_price=point.payload["actual_price"],
                     )
                 )
             return results
@@ -277,4 +280,79 @@ class QdrantClient:
             return True
         except Exception as e:
             print(f"Failed to delete collection: {e}")
+            return False
+
+    def list_products(
+        self,
+        collection_name: str,
+        limit: int = 10,
+        offset: int = 0,
+    ) -> list[Product]:
+        """List products from the collection.
+
+        Args:
+            collection_name: Name of the collection to list products from.
+            limit: Maximum number of products to return.
+            offset: Number of products to skip.
+
+        Returns:
+            List of Product objects.
+        """
+        response = self.client.scroll(
+            collection_name=collection_name,
+            limit=limit,
+            offset=offset,
+        )
+        results: list[Product] = []
+        for record in response[0]:
+            if record.payload is None:
+                continue
+            results.append(Product(**record.payload))
+        return results
+
+    def get_product(self, collection_name: str, product_id: int) -> Product:
+        """Get a product from the collection.
+
+        Args:
+            collection_name: Name of the collection to get the product from.
+            product_id: ID of the product to get.
+
+        Returns:
+            Product object.
+        """
+        response = self.client.scroll(
+            collection_name=collection_name,
+            limit=1,
+            scroll_filter=models.Filter(
+                must=[
+                    models.HasIdCondition(
+                        has_id=[product_id],
+                    )
+                ]
+            ),
+        )
+        if response[0][0].payload is None:
+            raise ValueError(f"Product with id {product_id} not found")
+        return Product(**response[0][0].payload)
+
+    def delete_product(self, collection_name: str, product_id: int) -> bool:
+        """Delete a product from the collection.
+
+        Args:
+            collection_name: Name of the collection to delete the product from.
+            product_id: ID of the product to delete.
+
+        Returns:
+            True if the product was deleted successfully.
+        """
+        try:
+            self.client.delete(
+                collection_name=collection_name,
+                points_selector=models.Filter(
+                    must=[models.HasIdCondition(has_id=[product_id])]
+                ),
+            )
+            return True
+        except Exception as e:
+            print(f"Failed to delete product: {e}")
             return False
