@@ -12,25 +12,40 @@ amazon-copilot/
 ├── src/                   # Source code
 │   └── amazon_copilot/    # Main package
 │       ├── __init__.py
-│       ├── config.py      # Configuration management
-│       ├── database.py    # Qdrant database integration
-│       ├── data_loader.py # Data loading functions
-│       ├── models.py      # Pydantic data models
+│       ├── api/           # API implementation
+│       │   ├── main.py    # API entry point
+│       │   └── routers/   # API endpoints
+│       ├── services/      # Business logic services
+│       ├── qdrant_client.py # Qdrant vector DB client
+│       ├── cli.py         # Command-line interface
+│       ├── schemas.py     # Data schemas
+│       ├── utils.py       # Utility functions
 │       └── py.typed       # Type checking marker
 ├── pyproject.toml         # Project configuration
-└── search_products.py     # Search CLI
+└── docker-compose.yml     # Docker configuration
 ```
 
 ## Development Environment
 
 ### Setup with UV
 
-We recommend using `uv` for a faster development workflow:
+We use `uv` for dependency management, which provides faster installation and better dependency resolution:
 
 ```bash
-# Install development dependencies
-uv pip install -e '.[dev]'
+# Install the package in development mode
+uv pip install -e .
+
+# Sync development dependencies
+uv sync --extra dev
+
+# Sync backend dependencies
+uv sync --extra backend
+
+# Sync all dependency groups at once
+uv sync --all-extras
 ```
+
+When adding new dependencies, make sure to run `uv sync` to update your environment.
 
 ### Pre-commit Hooks
 
@@ -78,10 +93,10 @@ The `py.typed` marker in the package root ensures type checkers analyze our pack
 
 ### Code Formatting
 
-Format your code with Black:
+Format your code with Ruff's formatter:
 
 ```bash
-black src/
+ruff format src/
 ```
 
 ### Linting
@@ -122,28 +137,39 @@ def my_function(param1: str, param2: int) -> bool:
 
 ## Dependency Management
 
-All dependencies are managed in `pyproject.toml`:
+Dependencies are defined in the `pyproject.toml` file, organized into groups:
 
 ```toml
 [project]
 dependencies = [
-    "package-name>=1.0.0",
+    # Core dependencies
+    "pydantic>=2.5.0",
+    "python-dotenv>=1.0.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "development-package>=2.0.0",
+    # Development dependencies
+    "mypy>=1.7.0",
+    "ruff>=0.1.5",
+]
+backend = [
+    # Backend dependencies
+    "qdrant-client>=1.6.0",
+    "fastembed>=0.6.1",
+    "fastapi>=0.115.12",
 ]
 ```
 
 To add a new dependency:
 
-1. Add it to `pyproject.toml`
-2. Install it with `uv pip install -e .`
+```bash
+uv add --extra <group_name> <dependency>
+```
 
 ## Testing
 
-We recommend writing tests for all new features using pytest:
+Write tests for all new features using pytest:
 
 ```python
 # test_module.py
@@ -159,12 +185,34 @@ Run tests with:
 pytest
 ```
 
+## API Development
+
+When developing API endpoints:
+
+1. Create route definitions in `src/amazon_copilot/api/routers/`
+2. Include the router in `main.py`
+3. Implement business logic in the `services` module
+
+Example:
+
+```python
+# src/amazon_copilot/api/routers/products.py
+from fastapi import APIRouter, Depends
+
+router = APIRouter(prefix="/products", tags=["products"])
+
+@router.get("/")
+async def list_products():
+    """List all products."""
+    # Implementation
+```
+
 ## Building and Distribution
 
 Build the package with:
 
 ```bash
-hatch build
+uv pip build
 ```
 
 This will create both a wheel and a source distribution in the `dist/` directory.
