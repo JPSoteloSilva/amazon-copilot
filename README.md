@@ -33,81 +33,87 @@ A vector-based search system for Amazon product data using Qdrant for similarity
    # Install uv if you don't have it
    pip install uv
 
-   # Create virtual environment and install dependencies
+   # Create virtual environment
    uv venv
+
+   # Activate virtual environment
    source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-   uv pip install -e .
+
+   # Sync dependencies with specific extras
+   uv sync --extra dev --extra backend
+
+   # Or sync all dependency groups at once
+   uv sync --all-extras
    ```
 
 3. **Start Qdrant database**:
    ```bash
-   # Option 1: Run standalone Qdrant container
-   docker run -d -p 6333:6333 -p 6334:6334 \
-     -v $(pwd)/qdrant_storage:/qdrant/storage \
-     --name amazon-qdrant qdrant/qdrant
-
-   # Option 2: Use Docker Compose (sets up both Qdrant and the app)
+   # Use Docker Compose (recommended)
    docker-compose up -d
    ```
 
-4. **Create environment variables**:
+4. **Configure environment**:
    ```bash
    cp .env.example .env
    ```
 
 ## Basic Usage
 
-### 1. Load product data
+### 1. Create collection and load data
 
 ```bash
-python -m amazon_copilot.data_loader --nrows 100
+# Create a collection
+amazon-copilot create-collection amazon_products
+
+# Load product data from CSV
+amazon-copilot load-products data/Amazon-Products.csv amazon_products
 ```
 
 ### 2. Search for products
 
 ```bash
-./search_products.py "wireless headphones"
+# Search using the CLI
+amazon-copilot search-products "wireless headphones" --collection-name amazon_products
 ```
 
-## API Usage
+### 3. API Usage
 
 Run the FastAPI development server:
 
 ```bash
-uv run fastapi dev src/amazon_copilot/api/main.py
+uvicorn amazon_copilot.api.main:app --reload
 ```
 
-This will start the API server in development mode with automatic reloading. You can access the API documentation at http://localhost:8000/docs after starting the server.
+Access the API documentation at http://localhost:8000/docs
 
 ## Documentation
 
-- [Detailed Setup Guide](docs/setup.md)
-- [Data Loading Guide](docs/data_loading.md)
-- [Search Guide](docs/search.md)
-- [Development Guide](docs/development.md)
+For detailed guides, refer to:
+
+- [Detailed Setup Guide](docs/setup.md) - Full installation instructions
+- [Data Loading Guide](docs/data_loading.md) - How to load and manage product data
+- [Search Guide](docs/search.md) - Advanced search options and filtering
+- [Development Guide](docs/development.md) - For contributors and developers
+- [Qdrant Setup Guide](docs/qdrant_setup.md) - Vector database configuration
 
 ## Project Structure
 
 ```
 amazon-copilot/
-├── src/amazon_copilot/    
-│   ├── api/               
-│   │   ├── main.py       
-│   │   ├── routers/       
-│   |   |   └── products.py                   
-│   │   ├── crud/       
-│   |   |   └── products.py                   
-│   ├── qdrant/           
-│   │   ├── client.py      
-│   │   └── utils.py
-│   └── shared/              
-|       └── schemas.py                  
-├── data/                  
-├── docs/                  
-├── pyproject.toml         
-├── docker-compose.yml     
-├── Dockerfile             
-└── search_products.py     
+├── src/amazon_copilot/
+│   ├── api/               # FastAPI implementation
+│   │   ├── main.py        # API entry point
+│   │   └── routers/       # API route definitions
+│   ├── services/          # Business logic services
+│   ├── qdrant_client.py   # Qdrant vector DB client
+│   ├── cli.py             # Command-line interface
+│   ├── schemas.py         # Data schemas
+│   └── utils.py           # Utility functions
+├── data/                  # Data directory
+├── docs/                  # Documentation
+├── pyproject.toml         # Project configuration
+├── docker-compose.yml     # Docker configuration
+└── README.md              # This file
 ```
 
 ## License
