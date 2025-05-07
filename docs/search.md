@@ -1,113 +1,187 @@
 # Search Guide
 
-This guide explains how to search for products using the Amazon Copilot system.
+This guide explains how to use the search functionality in Amazon Copilot.
 
-## Search CLI
+## Basic Search
 
-Amazon Copilot provides a command-line interface for searching products using semantic similarity.
-
-### Basic Search
-
-To search for products:
+The simplest way to search for products is using the CLI:
 
 ```bash
-./search_products.py "your search query"
+amazon-copilot search-products "wireless headphones" --collection-name amazon_products
 ```
 
-For example:
+This performs a semantic search using embeddings stored in the Qdrant vector database.
+
+## Search Parameters
+
+The search command supports several parameters:
 
 ```bash
-./search_products.py "wireless headphones with noise cancellation"
+amazon-copilot search-products "wireless headphones" amazon_products \
+  --main-category "Electronics" \
+  --sub-category "Headphones" \
+  --limit 20 \
+  --offset 0
 ```
 
-### Search Parameters
+### Available Parameters
 
-You can specify the maximum number of results to return:
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `query` | Search query text (required) | - |
+| `collection_name` | Name of the collection to search (required) | - |
+| `main_category` | Filter by main category | No filter |
+| `sub_category` | Filter by sub-category | No filter |
+| `limit` | Maximum number of results to return | 10 |
+| `offset` | Number of results to skip for pagination | 0 |
+
+## Search Techniques
+
+### Semantic Search
+
+The search uses vector similarity rather than just keyword matching:
+
+1. Your search query is converted into a vector embedding
+2. The database finds products with embeddings similar to your query
+3. Results are ordered by similarity score
+
+This allows for more intelligent searches that understand the meaning behind your query. For example:
+- "portable audio device" might return results for "MP3 player"
+- "device for listening to music while jogging" might return results for "wireless earbuds"
+
+### Filtering
+
+To narrow down search results, combine semantic search with category filtering:
 
 ```bash
-./search_products.py "smartphone" --limit 10
+amazon-copilot search-products "wireless" --main-category "Electronics" --sub-category "Headphones"
 ```
 
-## How Search Works
+This first finds semantically similar products, then applies the category filters.
 
-Amazon Copilot uses semantic search rather than keyword matching:
+### Pagination
 
-1. Your search query is converted to a vector embedding using the sentence-transformers model
-2. This embedding is compared to product embeddings stored in Qdrant
-3. Products are ranked by similarity (cosine similarity) to your query
-4. The most similar products are returned
+For large result sets, use pagination with the `limit` and `offset` parameters:
 
-## Example Output
+```bash
+# First page (results 1-10)
+amazon-copilot search-products "wireless" --limit 10 --offset 0
 
-```
-Searching for products similar to: 'wireless headphones'
-Returning up to 5 results
---------------------------------------------------
-
-1. Sony WH-1000XM4 Wireless Noise Cancelling Headphones
-   Category: electronics > Headphones
-   Price: ₹29,990 (Original: ₹33,990)
-   Rating: 4.7 (3,152 ratings)
-   Similarity: 0.8523
-   Link: https://www.amazon.in/Sony-WH-1000XM4-Cancelling-Headphones-Blue
-
-2. boAt Rockerz 450 Bluetooth On-Ear Headphones with Mic
-   Category: electronics > Headphones
-   Price: ₹1,499 (Original: ₹3,990)
-   Rating: 4.2 (42,569 ratings)
-   Similarity: 0.7890
-   Link: https://www.amazon.in/boAt-Rockerz-450-Headphone-Cancellation
+# Second page (results 11-20)
+amazon-copilot search-products "wireless" --limit 10 --offset 10
 ```
 
-## Search Tips
+## Search Results
 
-### Effective Queries
+Search results are displayed in a table format with product details:
 
-- **Use natural language**: "comfortable headphones for running" works better than "headphones running"
-- **Include important features**: "smartphone with good camera" is better than just "smartphone"
-- **Specify price ranges**: "budget-friendly laptop" or "premium smartphone"
+```
+┏━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━┓
+┃ ID   ┃ Name                                      ┃ Category                                 ┃ Price ($) ┃ Rating ┃
+┡━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━┩
+│ 1024 │ Bose QuietComfort 45 Bluetooth Wireless   │ Electronics > Headphones                │ 329.00    │ 4.7    │
+│      │ Noise Cancelling Headphones               │                                         │           │ (9854) │
+│ 2945 │ Sony WH-1000XM4 Wireless Premium Noise    │ Electronics > Headphones                │ 348.00    │ 4.8    │
+│      │ Canceling Overhead Headphones             │                                         │           │ (12587)│
+│ 5832 │ Beats Studio3 Wireless Noise Cancelling   │ Electronics > Headphones                │ 199.95    │ 4.5    │
+│      │ Over-Ear Headphones                       │                                         │           │ (7426) │
+└──────┴────────────────────────────────────────────┴─────────────────────────────────────────┴───────────┴────────┘
+```
 
-### Interpreting Results
+## API Search
 
-- **Similarity score**: Higher values (closer to 1.0) indicate better matches
-- **Unexpected results**: The semantic search might return products that don't contain your exact keywords but are contextually related
+The project includes a REST API for search, which can be used in web applications.
+
+### API Endpoints
+
+#### Search Products
+
+```
+GET /products/search
+```
+
+Query parameters:
+- `query`: Search text
+- `main_category`: (Optional) Filter by main category
+- `sub_category`: (Optional) Filter by sub category
+- `limit`: (Optional) Maximum results to return
+- `offset`: (Optional) Results to skip for pagination
+
+Example request:
+
+```bash
+curl -X GET "http://localhost:8000/products/search?query=wireless+headphones&limit=5" -H "accept: application/json"
+```
+
+#### API Response Format
+
+```json
+{
+  "results": [
+    {
+      "id": 1024,
+      "name": "Bose QuietComfort 45 Bluetooth Wireless Noise Cancelling Headphones",
+      "main_category": "Electronics",
+      "sub_category": "Headphones",
+      "image": "https://example.com/image1.jpg",
+      "link": "https://example.com/product1",
+      "ratings": 4.7,
+      "no_of_ratings": 9854,
+      "discount_price": 329.0,
+      "actual_price": 379.0
+    },
+    {
+      "id": 2945,
+      "name": "Sony WH-1000XM4 Wireless Premium Noise Canceling Overhead Headphones",
+      "main_category": "Electronics",
+      "sub_category": "Headphones",
+      "image": "https://example.com/image2.jpg",
+      "link": "https://example.com/product2",
+      "ratings": 4.8,
+      "no_of_ratings": 12587,
+      "discount_price": 348.0,
+      "actual_price": 399.99
+    }
+  ],
+  "total": 2,
+  "limit": 5,
+  "offset": 0
+}
+```
 
 ## Advanced Usage
 
-### Programmatic Search
+### Query Optimization
 
-You can use the search functionality in your Python code:
+For better search results:
 
-```python
-from amazon_copilot.database import QdrantService
+1. **Be specific**: Include details like brand, color, or features
+2. **Use natural language**: The semantic search works well with conversational queries
+3. **Combine with filters**: Use category filters to narrow results
 
-# Initialize Qdrant service
-qdrant = QdrantService()
+### Performance Tips
 
-# Search for products
-results = qdrant.search_similar_products("gaming laptop", limit=5)
+For optimal search performance:
 
-# Process results
-for result in results:
-    print(f"Product: {result.product.name}")
-    print(f"Price: {result.product.discount_price}")
-    print(f"Link: {result.product.link}")
-    print("---")
-```
+1. Use category filters to reduce the search space
+2. Keep collection sizes reasonable (under 1 million products per collection)
+3. Adjust pagination settings based on UI requirements
 
 ## Troubleshooting
 
-### No Results Returned
+### Common Search Issues
 
-If your search returns no results:
+1. **No results found**:
+   - Ensure data is loaded in the collection
+   - Try broader search terms
+   - Check that category filters aren't too restrictive
 
-- Ensure you've loaded data into the database (see [Data Loading Guide](data_loading.md))
-- Try more general search terms
-- Check that Qdrant is running correctly
+2. **Irrelevant results**:
+   - Make your query more specific
+   - Add category filters
+   - Check embedding model configuration
 
-### Low Relevance Results
-
-If the results don't seem relevant:
-
-- Try to be more specific in your query
-- Check the similarity scores - low scores (below 0.5) may indicate poor matches
+3. **Slow performance**:
+   - Reduce the size of your collection
+   - Use more specific search terms
+   - Add filtering to reduce the search space
