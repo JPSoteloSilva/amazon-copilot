@@ -20,6 +20,9 @@ dependencies = [
   "python-dotenv>=1.0.0",
 ]
 
+[project.scripts]
+amazon-copilot = "amazon_copilot.cli:app"
+
 [project.optional-dependencies]
 dev = [
   "mypy>=1.7.0",
@@ -64,19 +67,15 @@ mypy_path = ["src"]
 namespace_packages = true
 implicit_reexport = false
 
-[tool.hatch.build]
-# Maps the import name -> source directory
-package-dir = { "amazon_copilot" = "src/amazon_copilot" }
-
 [tool.hatch.build.targets.wheel]
-# Tell Hatchling "include the amazon_copilot package"
-packages = ["amazon_copilot"]
-# (no need for anything else here—py.typed lives alongside your code in src/amazon_copilot/py.typed)
+packages = ["src/amazon_copilot"]
+
+[tool.hatch.build.targets.wheel.sources]
+"src" = ""
 
 [tool.hatch.build.targets.sdist]
-# sdist will grab everything under src/, plus README & pyproject.toml
 include = [
-  "src/**",
-  "README.md",
-  "pyproject.toml",
+    "/src",
+    "/README.md",
+    "/pyproject.toml",
 ]
