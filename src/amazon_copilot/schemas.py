@@ -12,8 +12,3 @@ class Product(BaseModel):
     no_of_ratings: int | None
     discount_price: float | None
     actual_price: float | None
-
-
-class ProductResponse(BaseModel):
-    payload: Product
-    score: float
