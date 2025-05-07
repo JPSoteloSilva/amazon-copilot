@@ -90,24 +90,24 @@ This will start the API server in development mode with automatic reloading. You
 
 ```
 amazon-copilot/
-├── src/amazon_copilot/    
-│   ├── api/               
-│   │   ├── main.py       
-│   │   ├── routers/       
-│   |   |   └── products.py                   
-│   │   ├── crud/       
-│   |   |   └── products.py                   
-│   ├── qdrant/           
-│   │   ├── client.py      
+├── src/amazon_copilot/
+│   ├── api/
+│   │   ├── main.py
+│   │   ├── routers/
+│   |   |   └── products.py
+│   │   ├── crud/
+│   |   |   └── products.py
+│   ├── qdrant/
+│   │   ├── client.py
 │   │   └── utils.py
-│   └── shared/              
-|       └── schemas.py                  
-├── data/                  
-├── docs/                  
-├── pyproject.toml         
-├── docker-compose.yml     
-├── Dockerfile             
-└── search_products.py     
+│   └── shared/
+|       └── schemas.py
+├── data/
+├── docs/
+├── pyproject.toml
+├── docker-compose.yml
+├── Dockerfile
+└── search_products.py
 ```
 
 ## License
