@@ -114,7 +114,6 @@ amazon-copilot/
 ├── pyproject.toml         # Project configuration
 ├── docker-compose.yml     # Docker configuration
 └── README.md              # This file
-```
 
 ## License
 
