@@ -132,8 +132,12 @@ class QdrantClient:
                     )
                 )
 
-            self.client.upsert(collection_name=collection_name, points=points)
-            successful_adds += len(points)
+            try:
+                self.client.upsert(collection_name=collection_name, points=points)
+                successful_adds += len(points)
+            except Exception as e:
+                print(f"Failed to upsert batch starting at index {i}: {e}")
+                continue
 
         return successful_adds
 
@@ -193,9 +197,23 @@ class QdrantClient:
             query_filter = None
 
         # Generate embeddings for the query
-        dense_vectors = next(iter(self.dense_embedder.query_embed(query))).tolist()
-        sparse_vectors = next(iter(self.sparse_embedder.query_embed(query))).as_object()
+        dense_embedding_iter = iter(self.dense_embedder.query_embed(query))
+        try:
+            dense_vectors = next(dense_embedding_iter).tolist()
+        except StopIteration as e:
+            raise ValueError(
+                "Dense embedding generation failed: ",
+                "no embeddings returned for the query.",
+            ) from e
 
+        sparse_embedding_iter = iter(self.sparse_embedder.query_embed(query))
+        try:
+            sparse_vectors = next(sparse_embedding_iter).as_object()
+        except StopIteration as e:
+            raise ValueError(
+                "Sparse embedding generation failed: ",
+                "no embeddings returned for the query.",
+            ) from e
         prefetch = [
             models.Prefetch(
                 query=dense_vectors,  # type: ignore
