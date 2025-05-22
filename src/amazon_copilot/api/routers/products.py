@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from amazon_copilot.qdrant_client import QdrantClient
 from amazon_copilot.schemas import Product
@@ -62,18 +62,52 @@ def search_products_api(
     )
 
 
-@router.post("/", response_model=int)
+@router.post("/", response_model=tuple[list[Product], dict[int, str]])
 def add_product(
     product: Product,
     collection_name: str = Query(
         "amazon_products",
         description="Name of the collection to add product to",
     ),
+    prevent_duplicates: bool = Query(
+        True,
+        description="Whether to prevent adding products with IDs that already exist",
+    ),
     client: QdrantClient = qdrant_client_dependency,
-) -> int:
-    return add_products(
-        client=client, collection_name=collection_name, products=[product]
+) -> tuple[list[Product], dict[int, str]]:
+    successful_products, failed_products = add_products(
+        client=client,
+        collection_name=collection_name,
+        products=[product],
+        prevent_duplicates=prevent_duplicates,
     )
+
+    # If the product failed due to duplication
+    if (
+        product.id in failed_products
+        and "already exists" in failed_products[product.id]
+    ):
+        raise HTTPException(
+            status_code=409,  # Conflict status code
+            detail={
+                "message": f"Product with ID {product.id} already exists",
+                "product_id": product.id,
+                "error": failed_products[product.id],
+            },
+        )
+
+    # If it failed for any other reason
+    if not successful_products and failed_products:
+        raise HTTPException(
+            status_code=400,  # Bad Request status code
+            detail={
+                "message": "Failed to add product",
+                "product_id": product.id,
+                "error": failed_products.get(product.id, "Unknown error"),
+            },
+        )
+
+    return successful_products, failed_products
 
 
 @router.get("/{product_id}", response_model=Product)
@@ -85,12 +119,15 @@ def get_product_api(
     ),
     client: QdrantClient = qdrant_client_dependency,
 ) -> Product:
-    return get_product(
-        client=client, collection_name=collection_name, product_id=product_id
-    )
+    try:
+        return get_product(
+            client=client, collection_name=collection_name, product_id=product_id
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
-@router.delete("/{product_id}", response_model=bool)
+@router.delete("/{product_id}")
 def delete_product_api(
     product_id: int,
     collection_name: str = Query(
@@ -98,7 +135,13 @@ def delete_product_api(
         description="Name of the collection to delete product from",
     ),
     client: QdrantClient = qdrant_client_dependency,
-) -> bool:
-    return delete_product(
-        client=client, collection_name=collection_name, product_id=product_id
-    )
+) -> dict[str, bool]:
+    try:
+        delete_product(
+            client=client, collection_name=collection_name, product_id=product_id
+        )
+        return {"success": True}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
