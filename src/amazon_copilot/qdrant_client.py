@@ -95,51 +95,103 @@ class QdrantClient:
         products: list[Product],
         collection_name: str,
         batch_size: int = 100,
-    ) -> int:
+        prevent_duplicates: bool = True,
+    ) -> tuple[list[Product], dict[int, str]]:
         """Add a batch of products to the specified collection.
 
         Args:
             products: List of products to add.
             collection_name: Name of the collection to add the products to.
             batch_size: Number of products to add in each batch.
+            prevent_duplicates: If True, checks for existing products with the same ID
+                and prevents overwriting.
 
         Returns:
-            Number of products successfully added.
+            A tuple containing:
+            - List of products that were successfully added
+            - Dictionary mapping failed product IDs to failure reasons
         """
-        successful_adds = 0
+        successful_products: list[Product] = []
+        failed_products: dict[int, str] = {}
 
-        for i in tqdm(range(0, len(products), batch_size)):
-            batch = products[i : i + batch_size]
+        # Check for existing products if duplicate prevention is enabled
+        if prevent_duplicates and products:
+            for product in products:
+                try:
+                    # Try to retrieve the product to check if it exists
+                    self.client.retrieve(
+                        collection_name=collection_name,
+                        ids=[product.id],
+                        with_payload=False,
+                    )
+                    # If we get here, the product exists
+                    failed_products[product.id] = (
+                        f"Product with ID {product.id} already exists"
+                    )
+                except Exception:
+                    pass
+
+            # Filter out products that already exist
+            products_to_add = [p for p in products if p.id not in failed_products]
+            if not products_to_add:
+                return successful_products, failed_products
+        else:
+            products_to_add = products
+
+        for i in tqdm(range(0, len(products_to_add), batch_size)):
+            batch = products_to_add[i : i + batch_size]
             names = [p.name for p in batch]
 
-            dense_vecs = list(self.dense_embedder.embed(names))
-            sparse_vecs = list(self.sparse_embedder.embed(names))
+            try:
+                dense_vecs = list(self.dense_embedder.embed(names))
+                sparse_vecs = list(self.sparse_embedder.embed(names))
+            except Exception as e:
+                # If embedding fails for the entire batch, mark all as failed
+                error_message = f"Embedding generation failed: {str(e)}"
+                for product in batch:
+                    failed_products[product.id] = error_message
+                continue
 
             points = []
-            for product, dense_vec, sparse_vec in zip(
-                batch, dense_vecs, sparse_vecs, strict=True
-            ):
-                points.append(
-                    models.PointStruct(
-                        id=product.id,
-                        vector={
-                            self.dense_model_field_name: cast(
-                                list[float], dense_vec.tolist()
-                            ),
-                            self.sparse_model_field_name: sparse_vec.as_object(),  # type: ignore
-                        },
-                        payload=product.model_dump(),
+            # Track products and their points for error reporting
+            batch_product_map: dict[int, Product] = {}
+
+            try:
+                for product, dense_vec, sparse_vec in zip(
+                    batch, dense_vecs, sparse_vecs, strict=True
+                ):
+                    points.append(
+                        models.PointStruct(
+                            id=product.id,
+                            vector={
+                                self.dense_model_field_name: cast(
+                                    list[float], dense_vec.tolist()
+                                ),
+                                self.sparse_model_field_name: sparse_vec.as_object(),  # type: ignore
+                            },
+                            payload=product.model_dump(),
+                        )
                     )
-                )
+                    batch_product_map[product.id] = product
+            except Exception as e:
+                # If point construction fails, mark affected products as failed
+                error_message = f"Point construction failed: {str(e)}"
+                for product in batch:
+                    failed_products[product.id] = error_message
+                continue
 
             try:
                 self.client.upsert(collection_name=collection_name, points=points)
-                successful_adds += len(points)
+                # Mark all products in this batch as successful
+                for product in batch:
+                    successful_products.append(product)
             except Exception as e:
-                print(f"Failed to upsert batch starting at index {i}: {e}")
-                continue
+                error_message = f"Upsert operation failed: {str(e)}"
+                # Mark all products in this batch as failed
+                for product in batch:
+                    failed_products[product.id] = error_message
 
-        return successful_adds
+        return successful_products, failed_products
 
     def search_similar_products(
         self,
@@ -335,31 +387,36 @@ class QdrantClient:
 
         Returns:
             Product object.
-        """
-        response = self.client.scroll(
-            collection_name=collection_name,
-            limit=1,
-            scroll_filter=models.Filter(
-                must=[
-                    models.HasIdCondition(
-                        has_id=[product_id],
-                    )
-                ]
-            ),
-        )
-        if response[0][0].payload is None:
-            raise ValueError(f"Product with id {product_id} not found")
-        return Product(**response[0][0].payload)
 
-    def delete_product(self, collection_name: str, product_id: int) -> bool:
+        Raises:
+            ValueError: If the product with the specified ID is not found.
+        """
+        response = self.client.retrieve(
+            collection_name=collection_name,
+            ids=[product_id],
+            with_payload=True,
+            with_vectors=False,
+        )
+
+        # Check if response is empty
+        if not response:
+            raise ValueError(f"Product with id {product_id} not found")
+
+        # Check if the product has a payload
+        if response[0].payload is None:
+            raise ValueError(f"Product with id {product_id} found but has no payload")
+
+        return Product(**response[0].payload)
+
+    def delete_product(self, collection_name: str, product_id: int) -> None:
         """Delete a product from the collection.
 
         Args:
             collection_name: Name of the collection to delete the product from.
             product_id: ID of the product to delete.
 
-        Returns:
-            True if the product was deleted successfully.
+        Raises:
+            Exception: If the product is not found or the deletion fails.
         """
         try:
             self.client.delete(
@@ -368,7 +425,5 @@ class QdrantClient:
                     must=[models.HasIdCondition(has_id=[product_id])]
                 ),
             )
-            return True
         except Exception as e:
-            print(f"Failed to delete product: {e}")
-            return False
+            raise e
