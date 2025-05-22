@@ -132,13 +132,14 @@ def load_products(
     products = load_data(data_path, nrows=nrows, skiprows=skiprows)
 
     try:
-        successful_adds = add_products(
+        successful_adds, failed_products = add_products(
             client=client,
             collection_name=collection_name,
             products=products,
             batch_size=batch_size,
         )
-        logger.info(f"Products loaded successfully: {successful_adds}")
+        logger.info(f"Products loaded successfully: {len(successful_adds)}")
+        logger.info(f"Failed products: {failed_products}")
     except Exception as e:
         logger.error(f"Error loading products: {e}")
         raise typer.Exit(1) from e
