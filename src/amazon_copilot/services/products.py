@@ -47,9 +47,12 @@ def get_product(
     Returns:
         Product object if found, None otherwise.
     """
-
-    # The get_product method is async, so we need to await it
-    return client.get_product(collection_name=collection_name, product_id=product_id)
+    try:
+        return client.get_product(
+            collection_name=collection_name, product_id=product_id
+        )
+    except ValueError as e:
+        raise ValueError(f"Product with id {product_id} not found") from e
 
 
 def add_products(
@@ -57,7 +60,8 @@ def add_products(
     products: list[Product],
     collection_name: str = "amazon_products",
     batch_size: int = 100,
-) -> int:
+    prevent_duplicates: bool = True,
+) -> tuple[list[Product], dict[int, str]]:
     """
     Add products to the database.
 
@@ -66,16 +70,21 @@ def add_products(
         products: List of Product objects to add.
         collection_name: Name of the collection to add the products to.
         batch_size: Number of products to add in a single batch.
+        prevent_duplicates: If True, checks for existing products with the same ID and
+            prevents overwriting.
 
     Returns:
-        Number of products added successfully.
+        A tuple containing:
+        - List of products that were successfully added
+        - Dictionary mapping failed product IDs to failure reasons
     """
-    successful_adds = client.add_products(
+    successful_adds, failed_products = client.add_products(
         products=products,
         collection_name=collection_name,
         batch_size=batch_size,
+        prevent_duplicates=prevent_duplicates,
     )
-    return successful_adds
+    return successful_adds, failed_products
 
 
 def search_products(
@@ -101,5 +110,16 @@ def delete_product(
     client: QdrantClient,
     product_id: int,
     collection_name: str = "amazon_products",
-) -> bool:
-    return client.delete_product(collection_name=collection_name, product_id=product_id)
+) -> None:
+    """
+    Delete a product from the database.
+
+    Args:
+        client: QdrantClient instance.
+        product_id: ID of the product to delete.
+        collection_name: Name of the collection to delete the product from.
+
+    Raises:
+        Exception: If the product cannot be deleted.
+    """
+    client.delete_product(collection_name=collection_name, product_id=product_id)
