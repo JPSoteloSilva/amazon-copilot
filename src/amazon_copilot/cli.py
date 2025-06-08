@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from rich.console import Console
 from rich.table import Table
 
-from amazon_copilot.services.products import add_products
+from amazon_copilot.services.products import add_products, delete_product
 from amazon_copilot.utils import get_logger, get_qdrant_client, load_data
 
 app = typer.Typer(help="Amazon Copilot CLI for managing product data")
@@ -49,13 +49,11 @@ def delete_collection(
     logger.info(f"Deleting collection '{collection_name}'")
 
     try:
-        deleted = client.delete_collection(collection_name)
-        if deleted:
-            logger.info(f"Collection '{collection_name}' deleted successfully")
-        else:
-            logger.error(f"Failed to delete collection '{collection_name}'")
+        client.delete_collection(collection_name)
+        logger.info(f"Collection '{collection_name}' deleted successfully")
     except Exception as e:
         logger.error(f"Error deleting collection: {e}")
+        raise typer.Exit(1) from e
 
 
 @app.command(help="Search for products in Qdrant")
@@ -118,6 +116,9 @@ def load_products(
     nrows: int | None = typer.Option(None, help="Number of rows to read from CSV"),
     skiprows: int = typer.Option(0, help="Number of rows to skip from CSV"),
     batch_size: int = typer.Option(1000, help="Batch size for loading data"),
+    prevent_duplicates: bool = typer.Option(
+        True, help="Prevent adding products with IDs that already exist"
+    ),
 ) -> None:
     """Load products from CSV into Qdrant"""
     if not os.path.exists(data_path):
@@ -137,11 +138,75 @@ def load_products(
             collection_name=collection_name,
             products=products,
             batch_size=batch_size,
+            prevent_duplicates=prevent_duplicates,
         )
         logger.info(f"Products loaded successfully: {len(successful_adds)}")
-        logger.info(f"Failed products: {failed_products}")
+
+        if failed_products:
+            logger.warning(f"Failed to add {len(failed_products)} products:")
+            # Group failed products by error reason
+            error_groups: dict[str, list[int]] = {}
+            for product_id, error in failed_products.items():
+                if error not in error_groups:
+                    error_groups[error] = []
+                error_groups[error].append(product_id)
+
+            # Print summary by error type
+            for error, product_ids in error_groups.items():
+                if "already exists" in error:
+                    logger.info(f"Duplicate products (skipped): {len(product_ids)}")
+                    if (
+                        len(product_ids) <= 5
+                    ):  # Only show details for small number of products
+                        logger.info(
+                            f"  IDs: {', '.join(str(pid) for pid in product_ids)}"
+                        )
+                else:
+                    logger.error(f"Error: {error}")
+                    logger.error(f"  Affected {len(product_ids)} products")
+                    if (
+                        len(product_ids) <= 5
+                    ):  # Only show details for small number of products
+                        logger.error(
+                            f"  IDs: {', '.join(str(pid) for pid in product_ids)}"
+                        )
     except Exception as e:
         logger.error(f"Error loading products: {e}")
+        raise typer.Exit(1) from e
+
+
+@app.command(help="Delete a product from Qdrant")
+def delete_product_cmd(
+    product_id: int = typer.Argument(..., help="ID of the product to delete"),
+    collection_name: str = typer.Argument(
+        "amazon_products", help="Name of the collection to delete product from"
+    ),
+    force: bool = typer.Option(
+        False, "--force", "-f", help="Force deletion without confirmation"
+    ),
+) -> None:
+    """Delete a product from Qdrant"""
+    if not force:
+        confirm = typer.confirm(
+            f"Are you sure you want to delete product with ID {product_id}?"
+        )
+        if not confirm:
+            logger.info("Deletion cancelled")
+            return
+
+    client = get_qdrant_client()
+    logger.info(f"Deleting product {product_id} from collection '{collection_name}'")
+
+    try:
+        delete_product(
+            client=client, collection_name=collection_name, product_id=product_id
+        )
+        logger.info(f"Product {product_id} deleted successfully")
+    except ValueError as e:
+        logger.error(f"Product not found: {e}")
+        raise typer.Exit(1) from e
+    except Exception as e:
+        logger.error(f"Error deleting product: {e}")
         raise typer.Exit(1) from e
 
 
