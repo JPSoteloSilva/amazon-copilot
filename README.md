@@ -69,6 +69,16 @@ python -m amazon_copilot.data_loader --nrows 100
 ./search_products.py "wireless headphones"
 ```
 
+## API Usage
+
+Run the FastAPI development server:
+
+```bash
+uv run fastapi dev src/amazon_copilot/api/main.py
+```
+
+This will start the API server in development mode with automatic reloading. You can access the API documentation at http://localhost:8000/docs after starting the server.
+
 ## Documentation
 
 - [Detailed Setup Guide](docs/setup.md)
@@ -80,13 +90,24 @@ python -m amazon_copilot.data_loader --nrows 100
 
 ```
 amazon-copilot/
-├── src/amazon_copilot/    # Main package
-├── data/                  # Data directory
-├── docs/                  # Documentation
-├── pyproject.toml         # Project configuration
-├── docker-compose.yml     # Docker Compose configuration
-├── Dockerfile             # Container definition
-└── search_products.py     # Search CLI
+├── src/amazon_copilot/
+│   ├── api/
+│   │   ├── main.py
+│   │   ├── routers/
+│   |   |   └── products.py
+│   │   ├── crud/
+│   |   |   └── products.py
+│   ├── qdrant/
+│   │   ├── client.py
+│   │   └── utils.py
+│   └── shared/
+|       └── schemas.py
+├── data/
+├── docs/
+├── pyproject.toml
+├── docker-compose.yml
+├── Dockerfile
+└── search_products.py
 ```
 
 ## License

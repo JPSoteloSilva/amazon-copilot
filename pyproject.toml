@@ -8,6 +8,8 @@ version = "0.1.0"
 description = "An e-commerce platform using LLMs"
 authors = [
     {name = "JPSoteloSilva", email = "jpsotelosilva@gmail.com"},
+    {name = "JuanPabloConde10", email = "condejuanpablo10@gmail.com"},
+    {name = "xiribarnegaray", email = "xavieriribarnegaray@gmail.com"},
 ]
 requires-python = ">=3.12"
 readme = "README.md"
@@ -33,7 +35,7 @@ backend = [
     "qdrant-client>=1.6.0",
     "pandas>=2.0.0",
     "fastembed>=0.6.1",
-    "fastapi>=0.115.12",
+    "fastapi[standard]>=0.115.12",
 ]
 frontend = []
 

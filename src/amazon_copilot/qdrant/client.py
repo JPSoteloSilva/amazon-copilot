@@ -3,7 +3,7 @@ from qdrant_client import QdrantClient as QdrantAPI
 from qdrant_client import models
 from qdrant_client.http.models import CollectionInfo
 
-from amazon_copilot.schemas import Product, ProductResponse
+from amazon_copilot.shared.schemas import Product, ProductResponse
 
 
 class QdrantClient:

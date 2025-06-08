@@ -3,7 +3,7 @@ import start_research
 # %%
 #  correr 'docker-compose up -d qdrant' en la terminal
 # %%
-from amazon_copilot import QdrantClient
+from amazon_copilot.qdrant.client import QdrantClient
 # %%
 
 client = QdrantClient(
@@ -16,7 +16,7 @@ client = QdrantClient(
 # %%
 client.create_collection("test")
 # %%
-from amazon_copilot.utils import load_data
+from amazon_copilot.qdrant.utils import load_data
 
 products = load_data("data/Amazon-Products.csv", nrows=100)  # hay algun error para todos los datos
 products
