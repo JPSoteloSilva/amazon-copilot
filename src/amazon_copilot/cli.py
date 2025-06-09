@@ -21,12 +21,29 @@ def create_collection(
     client = get_qdrant_client()
     logger.info(f"Creating collection '{collection_name}'")
 
-    collection_created = client.create_collection(collection_name)
+    try:
+        collection_created = client.create_collection(collection_name)
 
-    if collection_created:
-        logger.info(f"Collection '{collection_name}' created successfully")
-    else:
-        logger.warning(f"Collection '{collection_name}' already exists")
+        if collection_created:
+            logger.info(f"Collection '{collection_name}' created successfully")
+        else:
+            # Check if collection actually exists or if there was another error
+            try:
+                client.get_collection_info(collection_name)
+                logger.warning(f"Collection '{collection_name}' already exists")
+            except Exception:
+                logger.error(
+                    f"Failed to create collection '{collection_name}' "
+                    "due to unknown error"
+                )
+                raise typer.Exit(1) from None
+    except ConnectionError as e:
+        logger.error(f"Cannot connect to Qdrant database. Is it running? Error: {e}")
+        logger.info("Try starting Qdrant with: docker-compose up -d")
+        raise typer.Exit(1) from None
+    except Exception as e:
+        logger.error(f"Error creating collection: {e}")
+        raise typer.Exit(1) from None
 
 
 @app.command(help="Delete a collection from Qdrant")
@@ -208,6 +225,29 @@ def delete_product_cmd(
     except Exception as e:
         logger.error(f"Error deleting product: {e}")
         raise typer.Exit(1) from e
+
+
+@app.command(help="Test connection to Qdrant and list collections")
+def test_connection() -> None:
+    """Test connection to Qdrant database"""
+    try:
+        client = get_qdrant_client()
+        logger.info("Testing connection to Qdrant...")
+
+        # Try to list collections to test connection
+        collections = client.client.get_collections()
+        logger.info("✓ Connected to Qdrant successfully!")
+        logger.info(f"Found {len(collections.collections)} collections:")
+
+        for collection in collections.collections:
+            info = client.client.get_collection(collection.name)
+            logger.info(f"  - {collection.name}: {info.points_count} points")
+
+    except Exception as e:
+        logger.error(f"✗ Failed to connect to Qdrant: {e}")
+        if "Connection refused" in str(e):
+            logger.info("Make sure Qdrant is running: docker-compose up -d")
+        raise typer.Exit(1) from None
 
 
 if __name__ == "__main__":
