@@ -55,6 +55,16 @@ def search_products_api(
     sub_category: str | None = Query(
         None, description="Sub category to filter products by"
     ),
+    price_min: float | None = Query(
+        None,
+        description="Minimum price filter (in USD)",
+        ge=0,
+    ),
+    price_max: float | None = Query(
+        None,
+        description="Maximum price filter (in USD)",
+        ge=0,
+    ),
     client: QdrantClient = qdrant_client_dependency,
 ) -> list[Product]:
     try:
@@ -66,6 +76,8 @@ def search_products_api(
             offset=offset,
             main_category=main_category,
             sub_category=sub_category,
+            price_min=price_min,
+            price_max=price_max,
         )
     except Exception as e:
         raise HTTPException(
