@@ -37,14 +37,12 @@ def create_collection(
                     "due to unknown error"
                 )
                 raise typer.Exit(1) from None
+    except ConnectionError as e:
+        logger.error(f"Cannot connect to Qdrant database. Is it running? Error: {e}")
+        logger.info("Try starting Qdrant with: docker-compose up -d")
+        raise typer.Exit(1) from None
     except Exception as e:
-        if "Connection refused" in str(e) or "ConnectionError" in str(e):
-            logger.error(
-                f"Cannot connect to Qdrant database. Is it running? Error: {e}"
-            )
-            logger.info("Try starting Qdrant with: docker-compose up -d")
-        else:
-            logger.error(f"Error creating collection: {e}")
+        logger.error(f"Error creating collection: {e}")
         raise typer.Exit(1) from None
 
 
