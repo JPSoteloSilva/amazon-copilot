@@ -1,77 +1,156 @@
-# Qdrant Vector Database Setup
+# Qdrant Setup Guide
 
-This document explains how to set up and use the Qdrant vector database for the Amazon Copilot project.
+This guide explains how to set up and configure Qdrant for use with Amazon Copilot.
 
 ## Overview
 
-The project uses Qdrant to store product information along with vector embeddings of product names. These embeddings enable semantic search capabilities, allowing users to find products similar to their queries.
+[Qdrant](https://qdrant.tech/) is a vector similarity search engine used in this project to store product embeddings and perform semantic searches.
 
-## Components
+## Running Qdrant
 
-1. **Docker Compose**: Sets up Qdrant in a containerized environment
-2. **QdrantService**: A Python service class that interacts with Qdrant
-3. **Data Loader**: A script to load Amazon product data from CSV into Qdrant
+### Option 1: Docker Container
 
-## Setup Instructions
-
-### Prerequisites
-
-- Docker and Docker Compose
-- Python 3.12+
-
-### Running the Setup
-
-1. Make sure Docker is running on your system
-2. Start the containers:
+The simplest way to run Qdrant is using Docker:
 
 ```bash
-docker-compose up -d
+docker run -d -p 6333:6333 -p 6334:6334 \
+  -v $(pwd)/qdrant_storage:/qdrant/storage \
+  --name amazon-qdrant qdrant/qdrant
 ```
 
-3. The data loader will automatically run within the application container
+This command:
+- `-d`: Runs the container in detached mode (background)
+- `-p 6333:6333`: Maps HTTP API port
+- `-p 6334:6334`: Maps gRPC port
+- `-v $(pwd)/qdrant_storage:/qdrant/storage`: Mounts a volume for data persistence
+- `--name amazon-qdrant`: Names the container
 
-### Accessing Qdrant
+### Option 2: Docker Compose (Recommended)
 
-- Qdrant API is available at: http://localhost:6333
-- Qdrant web UI is available at: http://localhost:6333/dashboard
+The project includes a `docker-compose.yml` file for easier management:
 
-## Implementation Details
+```bash
+# Start all services
+docker-compose up -d
 
-### Embedding Model
+# View logs
+docker-compose logs -f
 
-We use the `all-MiniLM-L6-v2` model from SentenceTransformers to create embeddings for product names. This model:
+# Stop all services
+docker-compose down
+```
 
-- Generates 384-dimensional embeddings
-- Is optimized for semantic similarity tasks
-- Provides a good balance between quality and performance
+This approach offers several advantages:
+- Automatically configures the network between services
+- Sets environment variables correctly
+- Provides health checks for dependencies
+- Mounts volumes for persistent data
 
-### Collection Structure
+## Verifying Qdrant is Running
 
-The Amazon products are stored in a collection named `amazon_products` with:
+Check the Qdrant status with:
 
-- 384-dimensional vectors using cosine similarity
-- Product metadata stored in the payload
-- Product ID used as the point ID
+```bash
+# HTTP health check
+curl http://localhost:6333/healthz
 
-## Usage Examples
+# Check container status
+docker ps | grep qdrant
+```
 
-### Searching for Similar Products
+The response should be: `{"ok":true}`
 
-```python
-from amazon_copilot.database import QdrantService
+## Collection Management
 
-# Initialize service
-qdrant = QdrantService()
+Collections in Qdrant are used to store vector embeddings and provide search functionality.
 
-# Search for products
-results = qdrant.search_similar_products("wireless headphones", limit=5)
+### Collection Configuration
 
-# Display results
-for i, result in enumerate(results):
-    print(f"{i+1}. {result.product.name}")
+When created with the CLI, collections are configured with:
+- Vector dimension: 384 (for the default model)
+- Distance metric: Cosine similarity
+- On-disk storage for vectors
+- Scalar filtering fields for categories
+
+### Creating Collections
+
+Collections are created automatically when needed, but you can manually create them:
+
+```bash
+amazon-copilot create-collection amazon_products
+```
+
+This command establishes the proper schema for semantic product search.
+
+## Qdrant Configuration
+
+The Qdrant client is configured using environment variables or the `.env` file:
+
+```
+QDRANT_HOST=localhost
+QDRANT_PORT=6333
+COLLECTION_NAME=amazon_products
+```
+
+## Qdrant Dashboard
+
+Qdrant includes a web dashboard for visualization and management:
+
+1. Access the dashboard at `http://localhost:6333/dashboard`
+2. Use it to:
+   - View collections and their configurations
+   - Explore vectors and points
+   - Perform test searches
+   - Monitor cluster health
+
+## Monitoring and Maintenance
+
+### Checking Collection Info
+
+```bash
+curl http://localhost:6333/collections/amazon_products
+```
+
+### Viewing Logs
+
+```bash
+docker logs amazon-qdrant
+```
+
+### Container Management
+
+```bash
+# Stop the container
+docker stop amazon-qdrant
+
+# Start the container
+docker start amazon-qdrant
+
+# Restart the container
+docker restart amazon-qdrant
+
+# Remove the container (deletes data if volume not used)
+docker rm -f amazon-qdrant
 ```
 
 ## Troubleshooting
 
-- If the Qdrant container fails to start, check Docker logs: `docker logs qdrant`
-- If connection issues occur, verify that the QDRANT_HOST and QDRANT_PORT in .env match the Docker Compose configuration
+### Connection Issues
+
+If you can't connect to Qdrant:
+- Check if Docker is running
+- Verify the container is up with `docker ps`
+- Ensure ports 6333 and 6334 are not in use by other services
+
+### Data Persistence
+
+If your data disappears after restarting:
+- Make sure you're using volume mounting with `-v $(pwd)/qdrant_storage:/qdrant/storage`
+- Check the permissions on your host directory
+
+### Performance Issues
+
+If search is slow:
+- Consider adjusting the vector dimensions or index type
+- Try reducing the number of points in your collection
+- Add more filters to narrow search scope

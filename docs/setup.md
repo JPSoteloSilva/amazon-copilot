@@ -1,6 +1,6 @@
 # Detailed Setup Guide
 
-This guide provides comprehensive setup instructions for the Amazon Copilot project.
+This guide provides comprehensive setup instructions for the Amazon Copilot project, expanding on the quick setup in the README.
 
 ## Prerequisites
 
@@ -93,7 +93,12 @@ uv --version
 
 3. **Install project dependencies with uv**:
    ```bash
-   uv pip install -e .
+   # Sync all dependency groups
+   uv sync --all-extras
+
+   # Or install specific dependency groups
+   uv sync --extra dev     # Development tools
+   uv sync --extra backend # Backend dependencies
    ```
 
 4. **Environment configuration**:
@@ -109,48 +114,15 @@ uv --version
    MODEL_NAME=all-MiniLM-L6-v2
    ```
 
-## Database Setup
+## Running the API
 
-### Option 1: Run Standalone Qdrant Container
-
-```bash
-docker run -d -p 6333:6333 -p 6334:6334 \
-  -v $(pwd)/qdrant_storage:/qdrant/storage \
-  --name amazon-qdrant qdrant/qdrant
-```
-
-### Option 2: Use Docker Compose (Recommended)
-
-The project includes a `docker-compose.yml` file that sets up both the Qdrant database and the application in containers:
+To run the FastAPI development server:
 
 ```bash
-# Start all services
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop all services
-docker-compose down
+uvicorn amazon_copilot.api.main:app --reload
 ```
 
-This approach offers several advantages:
-- Automatically configures the network between services
-- Sets environment variables correctly
-- Provides health checks for dependencies
-- Mounts volumes for persistent data
-
-### Verify Qdrant is running
-
-```bash
-# Check if container is running
-docker ps | grep qdrant
-
-# Check Qdrant API
-curl http://localhost:6333/healthz
-```
-
-The response should be: `{"ok":true}`
+Access the API documentation at http://localhost:8000/docs
 
 ## Development Tools
 
@@ -161,53 +133,36 @@ The response should be: `{"ok":true}`
 mypy src/amazon_copilot
 ```
 
-### Code Formatting
+### Code Formatting and Linting
 
 ```bash
-# Install development dependencies
-uv pip install '.[dev]'
-
-# Format code with black
-black src/
+# Format code with ruff
+ruff format src/
 
 # Run linter
 ruff check src/
 ```
 
-## Containerization
-
-The project includes a Dockerfile that allows you to build and run the application in a container:
-
-```bash
-# Build the image
-docker build -t amazon-copilot .
-
-# Run container
-docker run -it --rm \
-  -v $(pwd)/data:/app/data \
-  -e QDRANT_HOST=host.docker.internal \
-  amazon-copilot
-```
-
-For more advanced usage, the `docker-compose.yml` file provides a complete setup for both the application and the Qdrant database.
-
 ## Troubleshooting
 
 ### Common Issues
 
-1. **Qdrant connection refused**:
-   - Ensure Docker is running
-   - Check if Qdrant container is active: `docker ps`
-   - Restart the container: `docker restart amazon-qdrant`
-
-2. **Missing dependencies**:
-   - Reinstall with development extras: `uv pip install -e '.[dev]'`
-
-3. **Python version mismatch**:
+1. **Python version mismatch**:
    - Verify Python version: `python --version`
    - Ensure pyenv is properly configured: `pyenv version`
 
-4. **Docker networking issues**:
+2. **Missing dependencies**:
+   - Ensure you've installed all dependencies: `uv sync --all-extras`
+   - Check for errors in the installation logs
+
+3. **Docker networking issues**:
    - When running the app outside Docker but Qdrant inside Docker, use `localhost` as the host
    - When running both services with Docker Compose, the service name `qdrant` should be used as the host
-   - When running the app in Docker but Qdrant outside, use `host.docker.internal` as the host
+
+4. **Permission Issues**:
+   - On Linux/macOS, you might need to run some commands with `sudo`
+   - For Docker volume mounting issues, check file ownership and permissions
+
+5. **Installation Failures**:
+   - If `uv` installation fails, you can use pip as a fallback: `pip install -e .[dev,backend]`
+   - For SSL errors, ensure your certificates are up to date

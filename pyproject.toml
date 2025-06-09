@@ -6,54 +6,51 @@ build-backend = "hatchling.build"
 name = "amazon-copilot"
 version = "0.1.0"
 description = "An e-commerce platform using LLMs"
+readme = "README.md"
+license = { text = "MIT" }
 authors = [
-    {name = "JPSoteloSilva", email = "jpsotelosilva@gmail.com"},
-    {name = "JuanPabloConde10", email = "condejuanpablo10@gmail.com"},
-    {name = "xiribarnegaray", email = "xavieriribarnegaray@gmail.com"},
+  { name = "JPSoteloSilva",   email = "jpsotelosilva@gmail.com" },
+  { name = "JuanPabloConde10", email = "condejuanpablo10@gmail.com" },
+  { name = "xiribarnegaray",   email = "xavieriribarnegaray@gmail.com" },
 ]
 requires-python = ">=3.12"
-readme = "README.md"
-license = {text = "MIT"}
-
-# Main dependencies
 dependencies = [
-    "pydantic>=2.5.0",
-    "pydantic-settings>=2.0.0",
-    "python-dotenv>=1.0.0",
+  "pydantic>=2.5.0",
+  "pydantic-settings>=2.0.0",
+  "python-dotenv>=1.0.0",
 ]
+
+[project.scripts]
+amazon-copilot = "amazon_copilot.cli:app"
 
 [project.optional-dependencies]
 dev = [
-    "mypy>=1.7.0",
-    "ruff>=0.1.5",
-    "black>=23.11.0",
-    "pre-commit>=3.5.0",
-    "hatchling>=1.18.0",
-    "ipykernel>=6.29.5",
+  "mypy>=1.7.0",
+  "ruff>=0.1.5",
+  "black>=23.11.0",
+  "pre-commit>=3.5.0",
+  "ipykernel>=6.29.5",
+  "matplotlib>=3.10.1",
+  "pandas-stubs>=2.0.0.1",
 ]
 backend = [
-    "qdrant-client>=1.6.0",
-    "pandas>=2.0.0",
-    "fastembed>=0.6.1",
-    "fastapi[standard]>=0.115.12",
+  "qdrant-client>=1.6.0",
+  "pandas>=2.0.0",
+  "fastembed>=0.6.1",
+  "fastapi[standard]>=0.115.12",
+  "types-tqdm>=4.67.0.20250417",
+  "tqdm>=4.67.1",
+  "pandas-stubs>=2.2.3.250308",
 ]
-frontend = []
 
 [tool.ruff]
 line-length = 88
 target-version = "py312"
 select = ["E", "F", "I", "N", "W", "B", "C4", "UP"]
-ignore = []
 extend-exclude = ["tests", "research"]
 
 [tool.ruff.isort]
 known-first-party = ["amazon_copilot"]
-
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"
-skip-magic-trailing-comma = false
-line-ending = "auto"
 
 [tool.mypy]
 python_version = "3.12"
@@ -66,9 +63,9 @@ disallow_untyped_decorators = true
 no_implicit_optional = true
 strict_optional = true
 exclude = ["research/"]
-
-[tool.uv]
-package = true
+mypy_path = ["src"]
+namespace_packages = true
+implicit_reexport = false
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/amazon_copilot"]
@@ -82,7 +79,3 @@ include = [
     "/README.md",
     "/pyproject.toml",
 ]
-
-# This ensures py.typed is included in the package
-[tool.hatch.build.targets.wheel.shared-data]
-"src/amazon_copilot/py.typed" = "amazon_copilot/py.typed"

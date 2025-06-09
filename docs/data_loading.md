@@ -28,58 +28,105 @@ The project includes a sample dataset in `data/Amazon-Products.csv`. This file c
 To load data into the Qdrant vector database:
 
 ```bash
-python -m amazon_copilot.data_loader
+amazon-copilot load-products data/Amazon-Products.csv amazon_products
 ```
 
 This will:
 1. Read the entire CSV file
-2. Convert records to AmazonProduct objects
+2. Convert records to product objects
 3. Generate embeddings for each product
 4. Store products and embeddings in Qdrant
 
+### Loading Options
+
+The load-products command supports several options:
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--nrows` | Limit the number of rows to load | All rows |
+| `--skiprows` | Skip the first N rows | 0 |
+| `--batch-size` | Number of products to process at once | 100 |
+| `--model-name` | Embedding model to use | Value from .env |
+
 ### Loading a Subset of Data
 
-For testing or development, you may want to load only a subset of the data:
+For testing or development, load only a subset of the data:
 
 ```bash
-python -m amazon_copilot.data_loader --nrows 100
+amazon-copilot load-products data/Amazon-Products.csv amazon_products --nrows 100
 ```
 
-This loads only the first 100 rows from the CSV file.
+### Loading with Batch Processing
 
-### Loading Process
+For larger datasets, specify a batch size to control memory usage:
+
+```bash
+amazon-copilot load-products data/Amazon-Products.csv amazon_products --batch-size 500
+```
+
+### Resuming Failed Loads
+
+If a loading process fails, you can skip already processed rows:
+
+```bash
+amazon-copilot load-products data/Amazon-Products.csv amazon_products --skiprows 1000
+```
+
+### Loading Process Monitoring
 
 During loading, you'll see progress information:
 
 ```
-Loading data from data/Amazon-Products.csv
+Loading products from 'data/Amazon-Products.csv' into collection 'amazon_products'
 Loaded 100 rows from CSV
 Created 98 valid product objects
 Added 10/98 products to the database
 Added 20/98 products to the database
 ...
-Successfully added 98 products to the database
+Products loaded successfully: 98
 ```
 
-## Customizing Data Sources
+## Data Processing Details
 
-### Using a Different CSV File
+### Embedding Generation
 
-You can modify the path to the CSV file in the `data_loader.py` script:
+When loading data, the system:
 
-```python
-# In data_loader.py
-csv_path = os.path.join(root_dir, "path/to/your/file.csv")
+1. Uses the fastembed library to generate text embeddings
+2. By default, uses the all-MiniLM-L6-v2 model (384-dimensional vectors)
+3. Performs normalization on the embeddings
+4. Processes items in batches to optimize memory usage
+
+### Data Validation
+
+During import, records are validated to ensure:
+- Required fields are present
+- Numeric fields can be converted to proper types
+- IDs are unique
+
+Invalid records are skipped with warnings.
+
+## Collection Management
+
+### Creating Collections
+
+Before loading data, ensure your collection exists:
+
+```bash
+amazon-copilot create-collection amazon_products
 ```
 
-### Data Processing Pipeline
+The system will automatically create collections when needed, but pre-creating them allows you to verify configuration.
 
-The data loading process consists of these steps:
+### Deleting Collections
 
-1. **Loading CSV data** (`load_csv` function)
-2. **Processing data into models** (`process_dataframe` function)
-3. **Generating embeddings** (handled by `QdrantService.generate_embedding`)
-4. **Storing in database** (handled by `QdrantService.add_product`)
+To remove all data and delete a collection:
+
+```bash
+amazon-copilot delete-collection amazon_products --force
+```
+
+Use the `--force` flag to bypass the confirmation prompt.
 
 ## Troubleshooting
 
@@ -96,12 +143,12 @@ If you encounter issues with the CSV import:
 If embedding generation fails:
 
 - Ensure internet connectivity (needed to download the embedding model)
-- Check available disk space (the model requires approximately 100MB)
+- Check available disk space (the embedding model requires approximately 100MB)
+- Verify that you've installed the backend dependencies with `uv sync --extra backend`
 
-### Database Issues
+### Memory Management
 
-If you have trouble adding products to the database:
-
-- Verify that Qdrant is running (`curl http://localhost:6333/healthz`)
-- Check the Qdrant logs: `docker logs amazon-qdrant`
-- Restart Qdrant: `docker restart amazon-qdrant`
+For very large datasets:
+- Use smaller batch sizes (e.g., `--batch-size 50`)
+- Process the data in chunks using `--nrows` and `--skiprows`
+- Consider using a machine with more RAM
