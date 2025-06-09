@@ -1,5 +1,5 @@
 from amazon_copilot.qdrant_client import QdrantClient
-from amazon_copilot.schemas import Product
+from amazon_copilot.schemas import AddProductsResponse, Product
 
 
 def list_products(
@@ -61,7 +61,7 @@ def add_products(
     collection_name: str = "amazon_products",
     batch_size: int = 100,
     prevent_duplicates: bool = True,
-) -> tuple[list[Product], dict[int, str]]:
+) -> AddProductsResponse:
     """
     Add products to the database.
 
@@ -70,13 +70,11 @@ def add_products(
         products: List of Product objects to add.
         collection_name: Name of the collection to add the products to.
         batch_size: Number of products to add in a single batch.
-        prevent_duplicates: If True, checks for existing products with the same ID and
-            prevents overwriting.
+        prevent_duplicates: If True, checks for existing products with the same ID
+            and prevents overwriting.
 
     Returns:
-        A tuple containing:
-        - List of products that were successfully added
-        - Dictionary mapping failed product IDs to failure reasons
+        AddProductsResponse containing successful and failed products.
     """
     successful_adds, failed_products = client.add_products(
         products=products,
@@ -84,7 +82,7 @@ def add_products(
         batch_size=batch_size,
         prevent_duplicates=prevent_duplicates,
     )
-    return successful_adds, failed_products
+    return AddProductsResponse(successful=successful_adds, failed=failed_products)
 
 
 def search_products(

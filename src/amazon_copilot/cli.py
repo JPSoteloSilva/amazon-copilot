@@ -133,20 +133,20 @@ def load_products(
     products = load_data(data_path, nrows=nrows, skiprows=skiprows)
 
     try:
-        successful_adds, failed_products = add_products(
+        response = add_products(
             client=client,
             collection_name=collection_name,
             products=products,
             batch_size=batch_size,
             prevent_duplicates=prevent_duplicates,
         )
-        logger.info(f"Products loaded successfully: {len(successful_adds)}")
+        logger.info(f"Products loaded successfully: {len(response.successful)}")
 
-        if failed_products:
-            logger.warning(f"Failed to add {len(failed_products)} products:")
+        if response.failed:
+            logger.warning(f"Failed to add {len(response.failed)} products:")
             # Group failed products by error reason
             error_groups: dict[str, list[int]] = {}
-            for product_id, error in failed_products.items():
+            for product_id, error in response.failed.items():
                 if error not in error_groups:
                     error_groups[error] = []
                 error_groups[error].append(product_id)
