@@ -104,12 +104,18 @@ def load_data(
     Args:
         csv_path: Path to the csv file
         nrows: Number of rows to read
-        skiprows: Number of rows to skip
+        skiprows: Number of data rows to skip (header is always preserved)
 
     Returns:
         List of Product instances
     """
-    df = pd.read_csv(csv_path, nrows=nrows, skiprows=skiprows)
+    # Skip data rows while preserving header row (row 0)
+    if skiprows > 0:
+        # Create list that skips rows 1 through skiprows but keeps row 0 (header)
+        skiprows_list = list(range(1, skiprows + 1))
+        df = pd.read_csv(csv_path, nrows=nrows, skiprows=skiprows_list, header=0)
+    else:
+        df = pd.read_csv(csv_path, nrows=nrows, header=0)
     df = clean_data(df)
     products = [
         Product(

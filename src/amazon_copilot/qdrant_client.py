@@ -119,16 +119,18 @@ class QdrantClient:
             for product in products:
                 try:
                     # Try to retrieve the product to check if it exists
-                    self.client.retrieve(
+                    response = self.client.retrieve(
                         collection_name=collection_name,
                         ids=[product.id],
                         with_payload=False,
                     )
-                    # If we get here, the product exists
-                    failed_products[product.id] = (
-                        f"Product with ID {product.id} already exists"
-                    )
+                    # Check if response is not empty (product exists)
+                    if response:
+                        failed_products[product.id] = (
+                            f"Product with ID {product.id} already exists"
+                        )
                 except Exception:
+                    # If there's an error (like collection doesn't exist), skip check
                     pass
 
             # Filter out products that already exist
