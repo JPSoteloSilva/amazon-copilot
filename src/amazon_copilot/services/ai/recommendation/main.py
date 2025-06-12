@@ -51,22 +51,25 @@ def recommend_products(
         # Fall back to the cart summary if the LLM request fails
         query = cart_summary
 
-    # # Derive dominant categories for optional filtering
-    # main_cats = [p.main_category for p in shopping_cart if p.main_category]
-    # sub_cats = [p.sub_category for p in shopping_cart if p.sub_category]
+    results = []
+    for item in query.split("\n"):
+        try:
+            qdrant_item = qdrant_client.search_similar_products(
+                query=item, collection_name=collection_name, limit=1
+            )
+            results.extend(qdrant_item)
+        except Exception:
+            return []
 
-    # main_category = Counter(main_cats).most_common(1)[0][0] if main_cats else None
-    # sub_category = Counter(sub_cats).most_common(1)[0][0] if sub_cats else None
-
-    try:
-        results = qdrant_client.search_similar_products(
-            query=query,
-            collection_name=collection_name,
-            limit=limit * 2,
-            prefetch_limit=limit * 3,
-        )
-    except Exception:
-        return []
+    if len(results) < limit:
+        # If we don't have enough results, we need to get more
+        try:
+            more_items = qdrant_client.search_similar_products(
+                query=query, collection_name=collection_name, limit=limit
+            )
+            results.extend(more_items)
+        except Exception:
+            return []
 
     # Exclude existing cart items and trim to desired limit
     cart_ids = {p.id for p in shopping_cart}
