@@ -82,7 +82,6 @@ class QuestionsResponse(BaseModel):
 
 class PresentationResponse(BaseModel):
     message: str
-    products: list[Product]
 
 
 class Message(BaseModel):
