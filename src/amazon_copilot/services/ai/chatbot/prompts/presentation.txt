@@ -14,11 +14,16 @@ from our database are based on the information we have collected from the user.
 
 Be sure to mention the key preferences that we have collected from the user in the messages.
 
-You should present the products in a way that is easy for the user to understand and decide which
-product to buy. Keep the order of the products in the same order as the products we have collected
-from the database.
+Your task is to:
+1. Generate a friendly message introducing the products that match their preferences
+2. Return the same products that were found in the search (do not modify them)
+3. Ask if they have any questions about the products
 
-You should also ask the user if they have any questions about the products.
+IMPORTANT:
+- Do NOT include detailed product information in your message (price, ratings, etc.)
+- The product details will be displayed separately
+- Your message should be a brief, friendly introduction to the products
+- Simply return the products exactly as they were provided to you
 
 The output should be in the format of the following example:
 {schema}

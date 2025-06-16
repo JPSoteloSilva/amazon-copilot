@@ -21,7 +21,7 @@ If the user mentions a product category, you must map it to one of these valid m
 CATEGORY INFERENCE RULES:
 - Try to infer the main_category from context clues even when the user doesn't explicitly mention a category
 - Common inference patterns:
-  - "for my dog/cat/pet" → try to map to a pet-related category if available in {main_categories}
+  - "for my dog/cat/pet" → try to map to a pet-related category if available.
   - "for my baby/child/kid" → try to map to a baby/children-related category if available
   - "for my car/vehicle" → try to map to automotive category if available
   - "for cooking/kitchen" → try to map to kitchen/home category if available
