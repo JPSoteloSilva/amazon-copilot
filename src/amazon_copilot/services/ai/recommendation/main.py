@@ -1,3 +1,4 @@
+import json
 from typing import cast
 
 from openai import OpenAI, OpenAIError
@@ -27,9 +28,11 @@ def recommend_products(
         {
             "role": "system",
             "content": (
-                "You are an usefull assistant that works with a customer's cart, "
-                "Generate up to {limit} complementary Amazon products. "
-                "Return ONE idea per line, plain text."
+                f"You are an assistant that works with a customer's cart. "
+                f"Generate up to {limit} complementary Amazon products. "
+                "Return your answer as a JSON object with a single key 'queries' whose "
+                "value is an array of strings, each string being one "
+                "complementary-product idea."
             ),
         },
         {
@@ -44,16 +47,36 @@ def recommend_products(
             messages=cast(list[ChatCompletionMessageParam], messages),
             temperature=0.5,
             max_tokens=200,
+            response_format={"type": "json_object"},
         )
-        query = (completion.choices[0].message.content or "").strip()
-        print(query)
+
+        # Parse the JSON response coming from the model. Expected format:
+        # {"queries": ["idea1", "idea2", ...]}
+        try:
+            content = completion.choices[0].message.content or "{}"
+            parsed = json.loads(content)
+            ideas = parsed.get("queries", [])
+            if not isinstance(ideas, list):
+                ideas = []
+            # Keep only non-empty string ideas
+            ideas = [str(i).strip() for i in ideas if i]
+        except (json.JSONDecodeError, TypeError):
+            ideas = []
+
+        # Fallback to plain cart summary if we didn't get any idea from the model
+        if not ideas:
+            ideas = [cart_summary]
+
+        # Keep a convenience joined string for bulk search later
+        query = "\n".join(ideas)
     except OpenAIError:
         # Fall back to the cart summary if the LLM request fails
         query = cart_summary
 
     results = []
-    for item in query.split("\n"):
+    for item in ideas:
         try:
+            print(item)
             qdrant_item = qdrant_client.search_similar_products(
                 query=item, collection_name=collection_name, limit=1
             )
