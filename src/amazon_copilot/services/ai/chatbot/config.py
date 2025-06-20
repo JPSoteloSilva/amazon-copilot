@@ -29,6 +29,9 @@ REQUIRED_FIELD_FOR_SEARCH: Final[str] = "query"
 # Graph Configuration
 GRAPH_THREAD_ID: Final[str] = "conversation"
 
+# Product Configuration
+NUM_PRODUCTS_TO_PRESENT: Final[int] = 3
+
 # Validation
 if not OPENAI_API_KEY:
     raise ValueError(

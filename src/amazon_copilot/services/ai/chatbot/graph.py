@@ -11,6 +11,7 @@ from amazon_copilot.services.ai.chatbot.config import (
     GRAPH_THREAD_ID,
     LAST_N_MESSAGES,
     MIN_FIELDS_FOR_SEARCH,
+    NUM_PRODUCTS_TO_PRESENT,
     OPENAI_API_KEY,
     OPENAI_MODEL_NAME,
     OPENAI_TEMPERATURE,
@@ -27,6 +28,8 @@ from amazon_copilot.services.ai.chatbot.utils import (
     get_collection_prompt,
     get_presentation_prompt,
 )
+from amazon_copilot.services.products import search_products
+from amazon_copilot.utils import get_qdrant_client
 
 # Initialize OpenAI client
 client = OpenAI(api_key=OPENAI_API_KEY)
@@ -45,24 +48,6 @@ class GraphState(TypedDict):
     history: list[Message]
     preferences: UserPreferences
     products: list[Product]
-
-
-def search_products(preferences: UserPreferences) -> list[Product]:
-    """Mock function to search products - returns a hardcoded list of products"""
-    return [
-        Product(
-            id=1,
-            name="Product 1",
-            main_category="Category 1",
-            sub_category="Subcategory 1",
-            image="https://via.placeholder.com/150",
-            link="https://example.com/product1",
-            ratings=4.5,
-            no_of_ratings=100,
-            discount_price=100,
-            actual_price=120,
-        ),
-    ]
 
 
 def has_sufficient_preferences(preferences: UserPreferences) -> bool:
@@ -173,8 +158,20 @@ def collect_preferences_node(state: GraphState) -> GraphState:
 
 def search_products_node(state: GraphState) -> GraphState:
     """Handle searching products state"""
-    products = search_products(state["preferences"])
-    state["products"] = products
+    if state["preferences"].query:
+        qdrant_client = get_qdrant_client()
+        products = search_products(
+            client=qdrant_client,
+            query=state["preferences"].query,
+            collection_name="amazon_products",
+            limit=NUM_PRODUCTS_TO_PRESENT,
+            main_category=state["preferences"].main_category,
+            price_min=state["preferences"].price_min,
+            price_max=state["preferences"].price_max,
+        )
+        state["products"] = products
+    else:
+        state["products"] = []
     return state
 
 
