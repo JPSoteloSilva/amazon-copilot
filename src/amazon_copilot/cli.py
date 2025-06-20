@@ -89,7 +89,7 @@ def search_products(
     logger.info(f"Searching for '{query}' in collection '{collection_name}'")
 
     try:
-        results = client.search_similar_products(
+        results = client.list_products(
             query=query,
             collection_name=collection_name,
             main_category=main_category,
