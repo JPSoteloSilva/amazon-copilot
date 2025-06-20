@@ -81,7 +81,6 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
         DataFrame containing the cleaned product data
     """
     df = df.dropna(subset=["id", "image", "name"])
-
     df["ratings"] = df["ratings"].astype(str)
     df = df[df["ratings"] != "Get"]
     df = df[df["ratings"] != "FREE"]
@@ -116,6 +115,11 @@ def load_data(
         df = pd.read_csv(csv_path, nrows=nrows, skiprows=skiprows_list, header=0)
     else:
         df = pd.read_csv(csv_path, nrows=nrows, header=0)
+
+    start_id = skiprows + 1
+    ids = list(range(start_id, start_id + len(df)))
+    df["id"] = ids
+
     df = clean_data(df)
     products = [
         Product(
