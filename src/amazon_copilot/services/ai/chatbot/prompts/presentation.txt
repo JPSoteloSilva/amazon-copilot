@@ -12,18 +12,52 @@ Key principles:
 You are in the PRESENTATION state of the conversation. The products we have collected for the user
 from our database are based on the information we have collected from the user.
 
-Be sure to mention the key preferences that we have collected from the user in the messages.
+USER PREFERENCES COLLECTED:
+{user_preferences}
 
-Your task is to:
-1. Generate a friendly message introducing the products that match their preferences
-2. Return the same products that were found in the search (do not modify them)
-3. Ask if they have any questions about the products
+PRODUCTS FOUND:
+{products}
 
-IMPORTANT:
-- Do NOT include detailed product information in your message (price, ratings, etc.)
-- The product details will be displayed separately
-- Your message should be a brief, friendly introduction to the products
-- Simply return the products exactly as they were provided to you
+Your task is to generate ONE complete message that includes:
 
-The output should be in the format of the following example:
+1. **General Introduction**:
+   - A brief, friendly introduction saying you found products that match their preferences
+   - Specifically mention the key preferences collected from the user
+
+2. **Individual Product Descriptions**:
+   - For each product, use the placeholder format: <PRODUCT ID> where ID is the actual product ID
+   - Present products in the EXACT SAME ORDER as they appear in the products list above
+   - After each placeholder, provide a detailed description of that specific product
+   - Include the product name and highlight key features like:
+     - Main category and subcategory
+     - Price information (discount_price, actual_price if different)
+     - Ratings and number of ratings
+     - Any standout features or benefits
+   - Make each product description engaging and informative
+   - Highlight how each product aligns with the user's stated preferences
+   - DO NOT mention product links or images
+   - Focus only on features that matter to the customer
+
+REQUIRED FORMAT:
+```
+General introduction message here...
+
+<PRODUCT 123>:
+Detailed description of the product with ID 123 here...
+
+<PRODUCT 456>:
+Detailed description of the product with ID 456 here...
+
+<PRODUCT 789>:
+Detailed description of the product with ID 789 here...
+```
+
+CRITICAL REQUIREMENTS:
+- You MUST use the actual product ID in the placeholder format: <PRODUCT [ID]>
+- You MUST include one placeholder for EACH product provided
+- You MUST present products in the SAME ORDER as shown in the products list
+- Each product description should be detailed and engaging
+- The product IDs in placeholders will be used to map back to the actual products
+
+The output should be in the format of the following schema:
 {schema}
