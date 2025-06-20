@@ -61,29 +61,3 @@ class DeleteResponse(BaseModel):
         json_schema_extra = {
             "example": {"success": True, "message": "Product deleted successfully"}
         }
-
-
-class ProductQuery(BaseModel):
-    query: str | None = None
-    main_category: str | None = None
-    price_min: float | None = None
-    price_max: float | None = None
-
-
-class AgentResponse(BaseModel):
-    message: str
-    preferences: ProductQuery
-
-
-class QuestionsResponse(BaseModel):
-    message: str
-    restart: bool = False
-
-
-class PresentationResponse(BaseModel):
-    message: str
-
-
-class Message(BaseModel):
-    role: str
-    content: str
