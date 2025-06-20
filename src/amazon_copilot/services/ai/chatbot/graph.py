@@ -6,14 +6,7 @@ from openai import OpenAI
 from pydantic import BaseModel
 from typing_extensions import TypedDict
 
-from amazon_copilot.schemas import (
-    AgentResponse,
-    Message,
-    PresentationResponse,
-    Product,
-    ProductQuery,
-    QuestionsResponse,
-)
+from amazon_copilot.schemas import Product
 from amazon_copilot.services.ai.chatbot.config import (
     GRAPH_THREAD_ID,
     LAST_N_MESSAGES,
@@ -24,10 +17,15 @@ from amazon_copilot.services.ai.chatbot.config import (
     RECURSION_LIMIT,
     REQUIRED_FIELD_FOR_SEARCH,
 )
-from amazon_copilot.services.ai.chatbot.prompts import (
+from amazon_copilot.services.ai.chatbot.schemas import (
+    CollectionResponse,
+    Message,
+    PresentationResponse,
+    UserPreferences,
+)
+from amazon_copilot.services.ai.chatbot.utils import (
     get_collection_prompt,
     get_presentation_prompt,
-    get_questions_prompt,
 )
 
 # Initialize OpenAI client
@@ -42,16 +40,14 @@ class GraphState(TypedDict):
         history: List of conversation messages
         preferences: User's product preferences collected so far
         products: List of products found from search
-        restart_requested: Flag indicating if user wants to restart the conversation
     """
 
     history: list[Message]
-    preferences: ProductQuery
+    preferences: UserPreferences
     products: list[Product]
-    restart_requested: bool
 
 
-def search_products(preferences: ProductQuery) -> list[Product]:
+def search_products(preferences: UserPreferences) -> list[Product]:
     """Mock function to search products - returns a hardcoded list of products"""
     return [
         Product(
@@ -69,7 +65,7 @@ def search_products(preferences: ProductQuery) -> list[Product]:
     ]
 
 
-def has_sufficient_preferences(preferences: ProductQuery) -> bool:
+def has_sufficient_preferences(preferences: UserPreferences) -> bool:
     """Check if we have enough information to search for products"""
     filled_fields = sum(
         [
@@ -79,32 +75,30 @@ def has_sufficient_preferences(preferences: ProductQuery) -> bool:
             preferences.price_max is not None,
         ]
     )
-    return (
-        filled_fields >= MIN_FIELDS_FOR_SEARCH
-        and getattr(preferences, REQUIRED_FIELD_FOR_SEARCH) is not None
-    )
+
+    required_field_value = getattr(preferences, REQUIRED_FIELD_FOR_SEARCH)
+
+    print(f"Checking preferences: {preferences.model_dump()}")
+    print(f"Filled fields: {filled_fields} (need {MIN_FIELDS_FOR_SEARCH})")
+    print(f"Required field '{REQUIRED_FIELD_FOR_SEARCH}': {required_field_value}")
+
+    result = filled_fields >= MIN_FIELDS_FOR_SEARCH and required_field_value is not None
+
+    print(f"Sufficient preferences result: {result}")
+    return result
 
 
 def call_openai(
-    prompt: str, user_message: str, response_model: type[BaseModel]
+    system_prompt: str, messages: list[Message], response_model: type[BaseModel]
 ) -> BaseModel | None:
     """Helper function to call OpenAI API with Pydantic model validation"""
-    messages = [
-        {"role": "system", "content": prompt},
-        {"role": "user", "content": user_message},
-    ]
-
-    print("=== OpenAI Call Debug ===")
-    print(f"Model: {OPENAI_MODEL_NAME}")
-    print(f"Response model: {response_model}")
-    print(f"System prompt: {prompt}")
-    print(f"User message: {user_message}")
-    print("=" * 50)
+    openai_messages = [{"role": "system", "content": system_prompt}]
+    openai_messages.extend([msg.model_dump() for msg in messages])
 
     try:
         completion = client.beta.chat.completions.parse(
             model=OPENAI_MODEL_NAME,
-            messages=messages,  # type: ignore
+            messages=openai_messages,  # type: ignore
             response_format=response_model,
             temperature=OPENAI_TEMPERATURE,
         )
@@ -128,57 +122,57 @@ def collect_preferences_node(state: GraphState) -> GraphState:
     Node to collect user preferences for product search.
     This handles both initial collection and refinement of preferences.
     """
-    user_input = state["history"][-1].content
+    # Get the system prompt
+    system_prompt = get_collection_prompt()
 
-    # Build context from conversation history
-    context = ""
-    if len(state["history"]) > 1:
-        context = "\n".join(
-            [
-                f"{msg.role}: {msg.content}"
-                for msg in state["history"][-LAST_N_MESSAGES:]
-            ]
-        )
+    # Add current preferences to system prompt if they exist
+    if state["preferences"] and any(
+        v is not None for v in state["preferences"].model_dump().values()
+    ):
+        system_prompt += f"\n\nCurrent preferences: {state['preferences'].model_dump()}"
 
-    # Add current preferences to context
-    if state["preferences"]:
-        context += f"\n\nCurrent preferences: {state['preferences'].model_dump()}"
+    # Get the last N messages for context
+    recent_messages = (
+        state["history"][-LAST_N_MESSAGES:]
+        if len(state["history"]) > LAST_N_MESSAGES
+        else state["history"]
+    )
 
-    full_prompt = get_collection_prompt() + context
+    collection_response = call_openai(
+        system_prompt, recent_messages, CollectionResponse
+    )
 
-    agent_response = call_openai(full_prompt, user_input, AgentResponse)
-
-    if agent_response and isinstance(agent_response, AgentResponse):
-        # Merge new preferences with existing ones
+    if collection_response and isinstance(collection_response, CollectionResponse):
         current_preferences = state["preferences"]
-        new_preferences = agent_response.preferences
+        new_preferences = collection_response.preferences
         merged_preferences_dict = current_preferences.model_dump()
 
         for field, new_value in new_preferences.model_dump().items():
             if new_value is not None:
                 merged_preferences_dict[field] = new_value
 
-        state["preferences"] = ProductQuery(**merged_preferences_dict)
+        state["preferences"] = UserPreferences(**merged_preferences_dict)
 
-        # Only add assistant message if we don't have sufficient preferences to proceed
-        # If we have enough info, we'll proceed to search without adding a message
-        if not has_sufficient_preferences(state["preferences"]):
-            state["history"].append(
-                Message(role="assistant", content=agent_response.message)
+        sufficient = has_sufficient_preferences(state["preferences"])
+
+        if not sufficient:
+            assistant_message = Message(
+                role="assistant", content=collection_response.message
             )
+            state["history"].append(assistant_message)
+        else:
+            pass
     else:
-        state["history"].append(
-            Message(
-                role="assistant", content="I'm sorry, I couldn't find any products."
-            )
+        error_message = Message(
+            role="assistant", content="I'm sorry, I couldn't find any products."
         )
+        state["history"].append(error_message)
 
     return state
 
 
 def search_products_node(state: GraphState) -> GraphState:
     """Handle searching products state"""
-    # Search for products using the collected preferences
     products = search_products(state["preferences"])
     state["products"] = products
     return state
@@ -186,102 +180,27 @@ def search_products_node(state: GraphState) -> GraphState:
 
 def present_products_node(state: GraphState) -> GraphState:
     """Node to present found products to the user"""
-    preferences_summary = {
-        k: v for k, v in state["preferences"].model_dump().items() if v is not None
-    }
+    context_content = (
+        "Generate a friendly message introducing these products to the user."
+    )
 
-    # Create context with products for the AI to reference in generating the message
-    context = f"""
-    User preferences collected: {preferences_summary}
-    Products found: {len(state["products"])} products
+    messages = [Message(role="user", content=context_content)]
 
-    Here are the products to present to the user:
-    {[product.model_dump() for product in state["products"]]}
-
-    Generate a friendly message introducing these products to the user.
-    """
-
-    prompt = get_presentation_prompt()
-    presentation_response = call_openai(prompt, context, PresentationResponse)
+    system_prompt = get_presentation_prompt(state["preferences"], state["products"])
+    presentation_response = call_openai(system_prompt, messages, PresentationResponse)
 
     if presentation_response and isinstance(
         presentation_response, PresentationResponse
     ):
-        state["history"].append(
-            Message(
-                role="assistant",
-                content=presentation_response.message,
-            )
+        assistant_message = Message(
+            role="assistant", content=presentation_response.message
         )
+        state["history"].append(assistant_message)
     else:
-        state["history"].append(
-            Message(
-                role="assistant", content="I'm sorry, I couldn't find any products."
-            )
+        error_message = Message(
+            role="assistant", content="I'm sorry, I couldn't find any products."
         )
-
-    return state
-
-
-def answer_questions_node(state: GraphState) -> GraphState:
-    """Node to answer questions about presented products"""
-    user_input = state["history"][-1].content
-
-    # Build comprehensive context with products and conversation history
-    products_info = []
-    for product in state["products"]:
-        product_info = f"""
-        Product: {product.name}
-        - ID: {product.id}
-        - Category: {product.main_category} > {product.sub_category}
-        - Price: ${product.discount_price} (original: ${product.actual_price})
-        - Rating: {product.ratings}/5 ({product.no_of_ratings} reviews)
-        - Link: {product.link}
-        """
-        products_info.append(product_info.strip())
-
-    # Get recent conversation for context
-    recent_messages = []
-    for msg in state["history"][-LAST_N_MESSAGES:]:
-        recent_messages.append(f"{msg.role}: {msg.content}")
-
-    context = f"""
-    PRODUCTS PRESENTED TO USER:
-    {chr(10).join(products_info)}
-
-    RECENT CONVERSATION HISTORY:
-    {chr(10).join(recent_messages)}
-
-    USER PREFERENCES:
-    {state["preferences"].model_dump()}
-
-    The user is asking: {user_input}
-    """
-
-    prompt = get_questions_prompt() + f"\n\nContext: {context}"
-    questions_response = call_openai(prompt, user_input, QuestionsResponse)
-
-    if questions_response is not None and isinstance(
-        questions_response, QuestionsResponse
-    ):
-        if questions_response.restart:
-            state["restart_requested"] = True
-            # Reset state for new search but keep the original user input
-            state["products"] = []
-            state["preferences"] = ProductQuery()
-            # Don't add the assistant's restart acknowledgment message yet
-            # The collection node will handle the user's original request
-        else:
-            # Normal question answering - add the response
-            state["history"].append(
-                Message(role="assistant", content=questions_response.message)
-            )
-    else:
-        state["history"].append(
-            Message(
-                role="assistant", content="I'm sorry, I couldn't find any products."
-            )
-        )
+        state["history"].append(error_message)
 
     return state
 
@@ -294,21 +213,7 @@ def route_after_collection(
     Routes to search if we have sufficient preferences, otherwise stays in collection.
     """
     has_sufficient = has_sufficient_preferences(state["preferences"])
-    route_decision = "search_products" if has_sufficient else "collect_preferences"
-
-    return route_decision
-
-
-def route_after_questions(
-    state: GraphState,
-) -> Literal["collect_preferences", "answer_questions"]:
-    """
-    Conditional edge function to route after answering questions.
-    Routes to collection if restart is requested, otherwise stays in questions.
-    """
-    if state.get("restart_requested", False):
-        return "collect_preferences"
-    return "answer_questions"
+    return "search_products" if has_sufficient else "collect_preferences"
 
 
 def run_conversation(user_input: str, state: GraphState | None = None) -> GraphState:
@@ -326,68 +231,29 @@ def run_conversation(user_input: str, state: GraphState | None = None) -> GraphS
     if state is None:
         state = GraphState(
             history=[Message(role="user", content=user_input)],
-            preferences=ProductQuery(),
+            preferences=UserPreferences(),
             products=[],
-            restart_requested=False,
         )
-        # Start with collection for new conversations
-        start_node = "collect_preferences"
     else:
-        # Add new user message to existing conversation
         state["history"].append(Message(role="user", content=user_input))
-        # Reset restart flag for new input
-        state["restart_requested"] = False
 
-        # Determine starting node based on conversation state
-        if state["products"]:  # Products have been presented
-            start_node = "answer_questions"
-        else:  # No products yet, continue collection
-            start_node = "collect_preferences"
-
-    # Create workflow with dynamic starting point
     workflow = StateGraph(GraphState)
 
-    # Add nodes
     workflow.add_node("collect_preferences", collect_preferences_node)
     workflow.add_node("search_products", search_products_node)
     workflow.add_node("present_products", present_products_node)
-    workflow.add_node("answer_questions", answer_questions_node)
 
-    if start_node == "collect_preferences":
-        # Collection flow
-        workflow.add_edge(START, "collect_preferences")
-        workflow.add_conditional_edges(
-            "collect_preferences",
-            route_after_collection,
-            {
-                "collect_preferences": END,
-                "search_products": "search_products",
-            },
-        )
-        workflow.add_edge("search_products", "present_products")
-        workflow.add_edge("present_products", END)
-    else:
-        # Questions flow
-        workflow.add_edge(START, "answer_questions")
-        workflow.add_conditional_edges(
-            "answer_questions",
-            route_after_questions,
-            {
-                "answer_questions": END,
-                "collect_preferences": "collect_preferences",
-            },
-        )
-        # If restarting from questions, add collection flow
-        workflow.add_conditional_edges(
-            "collect_preferences",
-            route_after_collection,
-            {
-                "collect_preferences": END,
-                "search_products": "search_products",
-            },
-        )
-        workflow.add_edge("search_products", "present_products")
-        workflow.add_edge("present_products", END)
+    workflow.add_edge(START, "collect_preferences")
+    workflow.add_conditional_edges(
+        "collect_preferences",
+        route_after_collection,
+        {
+            "collect_preferences": END,
+            "search_products": "search_products",
+        },
+    )
+    workflow.add_edge("search_products", "present_products")
+    workflow.add_edge("present_products", END)
 
     app = workflow.compile()
 
@@ -400,7 +266,6 @@ def run_conversation(user_input: str, state: GraphState | None = None) -> GraphS
         result = app.invoke(state, config=config)
         return result  # type: ignore
     except Exception as e:
-        # Graceful error handling
         error_message = f"I encountered an error: {str(e)}. Let's try again."
         state["history"].append(Message(role="assistant", content=error_message))
         return state
