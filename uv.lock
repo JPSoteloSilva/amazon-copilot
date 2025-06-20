@@ -18,7 +18,12 @@ dependencies = [
     { name = "python-dotenv" },
 ]
 
-[package.optional-dependencies]
+[package.dev-dependencies]
+ai = [
+    { name = "langchain-core" },
+    { name = "langgraph" },
+    { name = "openai" },
+]
 backend = [
     { name = "fastapi", extra = ["standard"] },
     { name = "fastembed" },
@@ -54,12 +59,32 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.5.0" },
     { name = "pydantic-settings", specifier = ">=2.0.0" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
-    { name = "qdrant-client", marker = "extra == 'backend'", specifier = ">=1.6.0" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.1.5" },
-    { name = "tqdm", marker = "extra == 'backend'", specifier = ">=4.67.1" },
-    { name = "types-tqdm", marker = "extra == 'backend'", specifier = ">=4.67.0.20250417" },
 ]
-provides-extras = ["dev", "backend"]
+
+[package.metadata.requires-dev]
+ai = [
+    { name = "langchain-core", specifier = ">=0.1.0" },
+    { name = "langgraph", specifier = ">=0.0.40" },
+    { name = "openai", specifier = ">=1.0.0" },
+]
+backend = [
+    { name = "fastapi", extras = ["standard"], specifier = ">=0.115.12" },
+    { name = "fastembed", specifier = ">=0.6.1" },
+    { name = "pandas", specifier = ">=2.0.0" },
+    { name = "pandas-stubs", specifier = ">=2.2.3.250308" },
+    { name = "qdrant-client", specifier = ">=1.6.0" },
+    { name = "tqdm", specifier = ">=4.67.1" },
+    { name = "types-tqdm", specifier = ">=4.67.0.20250417" },
+]
+dev = [
+    { name = "black", specifier = ">=23.11.0" },
+    { name = "ipykernel", specifier = ">=6.29.5" },
+    { name = "matplotlib", specifier = ">=3.10.1" },
+    { name = "mypy", specifier = ">=1.7.0" },
+    { name = "pandas-stubs", specifier = ">=2.0.0.1" },
+    { name = "pre-commit", specifier = ">=3.5.0" },
+    { name = "ruff", specifier = ">=0.1.5" },
+]
 
 [[package]]
 name = "annotated-types"
