@@ -63,13 +63,8 @@ def has_sufficient_preferences(preferences: UserPreferences) -> bool:
 
     required_field_value = getattr(preferences, REQUIRED_FIELD_FOR_SEARCH)
 
-    print(f"Checking preferences: {preferences.model_dump()}")
-    print(f"Filled fields: {filled_fields} (need {MIN_FIELDS_FOR_SEARCH})")
-    print(f"Required field '{REQUIRED_FIELD_FOR_SEARCH}': {required_field_value}")
-
     result = filled_fields >= MIN_FIELDS_FOR_SEARCH and required_field_value is not None
 
-    print(f"Sufficient preferences result: {result}")
     return result
 
 
@@ -91,14 +86,9 @@ def call_openai(
         if completion.choices[0].message.parsed:
             return completion.choices[0].message.parsed
         else:
-            print(
-                f"OpenAI parsing failed. Raw response: "
-                f"{completion.choices[0].message.content}"
-            )
             return None
 
-    except Exception as e:
-        print(f"OpenAI API call failed: {str(e)}")
+    except Exception:
         return None
 
 
