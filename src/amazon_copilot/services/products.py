@@ -40,8 +40,6 @@ def list_products(
         optional category filtering.
         - Category filters work in both modes.
         - main_category must be defined if sub_category is defined.
-        - When limit is None, all matching results are returned (use with caution for
-        large datasets).
     """
     return client.list_products(
         collection_name=collection_name,

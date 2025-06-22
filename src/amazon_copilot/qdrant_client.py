@@ -243,6 +243,8 @@ class QdrantClient:
         2. Search mode (query provided): Performs semantic search with relevance ranking
         and optional category filtering.
 
+        Pagination is applied after filtering to ensure correct results.
+
         Args:
             collection_name: Name of the collection to list/search products from.
             query: Optional search query. If None, returns products in database order.
@@ -285,18 +287,34 @@ class QdrantClient:
 
         # If no query is provided, use simple scroll (list mode)
         if query is None:
-            response = self.client.scroll(
-                collection_name=collection_name,
-                limit=limit,
-                offset=offset,
-                scroll_filter=query_filter,
-            )
-            product_results: list[Product] = []
-            for record in response[0]:
-                if record.payload is None:
-                    continue
-                product_results.append(Product(**record.payload))
-            return product_results
+            all_products: list[Product] = []
+            scroll_offset = 0
+            scroll_limit = 1000  # Process in batches
+
+            while True:
+                records, next_offset = self.client.scroll(
+                    collection_name=collection_name,
+                    limit=scroll_limit,
+                    offset=scroll_offset,
+                    scroll_filter=query_filter,
+                )
+
+                # Process records in this batch
+                for record in records:
+                    if record.payload is None:
+                        continue
+                    all_products.append(Product(**record.payload))
+
+                # If there's no next offset, we've reached the end
+                if next_offset is None:
+                    break
+
+                scroll_offset = next_offset
+
+            # Apply pagination manually
+            start_idx = offset
+            end_idx = offset + limit
+            return all_products[start_idx:end_idx]
 
         # If query is provided, use search mode with embeddings
         # Generate embeddings for the query
@@ -390,18 +408,12 @@ class QdrantClient:
 
         while True:
             # Get a batch of products to extract categories
-            response = self.client.scroll(
+            records, next_offset = self.client.scroll(
                 collection_name=collection_name,
                 limit=batch_size,
                 offset=offset,
                 with_payload=True,
             )
-
-            records = response[0]
-
-            # If no records returned, we've reached the end
-            if not records:
-                break
 
             # Process records in this batch
             for record in records:
@@ -418,8 +430,12 @@ class QdrantClient:
                     if sub_category:
                         categories[main_category].add(sub_category)
 
-            # Move to next batch
-            offset += batch_size
+            # If there's no next offset, we've reached the end
+            if next_offset is None:
+                break
+
+            # Move to next batch using the next offset
+            offset = next_offset
 
         # Convert sets to sorted lists for consistent output
         return {main_cat: sorted(sub_cats) for main_cat, sub_cats in categories.items()}

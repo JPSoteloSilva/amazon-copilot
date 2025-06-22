@@ -49,6 +49,9 @@ def list_products_api(
     2. Search mode (query provided): Performs semantic search with relevance ranking
     and optional category filtering
 
+    Pagination is applied after filtering to ensure correct results when using both
+    filters and pagination parameters.
+
     Note: main_category must be defined if sub_category is defined.
     """
     try:
