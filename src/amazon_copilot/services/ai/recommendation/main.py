@@ -77,7 +77,7 @@ def recommend_products(
     for item in ideas:
         try:
             print(item)
-            qdrant_item = qdrant_client.search_similar_products(
+            qdrant_item = qdrant_client.list_products(
                 query=item, collection_name=collection_name, limit=1
             )
             results.extend(qdrant_item)
@@ -87,7 +87,7 @@ def recommend_products(
     if len(results) < limit:
         # If we don't have enough results, we need to get more
         try:
-            more_items = qdrant_client.search_similar_products(
+            more_items = qdrant_client.list_products(
                 query=query, collection_name=collection_name, limit=limit
             )
             results.extend(more_items)

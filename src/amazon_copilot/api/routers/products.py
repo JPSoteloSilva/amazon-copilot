@@ -17,13 +17,15 @@ qdrant_client_dependency = Depends(get_qdrant_client)
 
 
 @router.get("/", response_model=list[Product], status_code=status.HTTP_200_OK)
-def get_products_api(
+def list_products_api(
     collection_name: str = Query(
         "amazon_products",
         description="Name of the collection to retrieve products from",
     ),
-    limit: int | None = Query(
-        10, description="Maximum number of products to retrieve. Use null for all results", ge=1
+    limit: int = Query(
+        10,
+        description="Maximum number of products to retrieve.",
+        ge=1,
     ),
     offset: int = Query(0, description="Number of products to skip", ge=0),
     query: str | None = Query(
@@ -33,16 +35,20 @@ def get_products_api(
         None, description="Optional main category to filter products by"
     ),
     sub_category: str | None = Query(
-        None, description="Optional sub category to filter products by (requires main_category)"
+        None,
+        description=(
+            "Optional sub category to filter products by (requires main_category)"
+        ),
     ),
     client: QdrantClient = qdrant_client_dependency,
 ) -> list[Product]:
     """Unified endpoint for listing and searching products.
-    
+
     This endpoint can be used in two modes:
     1. List mode (query=None): Returns all products with optional category filtering
-    2. Search mode (query provided): Performs semantic search with relevance ranking and optional category filtering
-    
+    2. Search mode (query provided): Performs semantic search with relevance ranking
+    and optional category filtering
+
     Note: main_category must be defined if sub_category is defined.
     """
     try:
@@ -56,7 +62,9 @@ def get_products_api(
             sub_category=sub_category,
         )
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+        ) from e
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

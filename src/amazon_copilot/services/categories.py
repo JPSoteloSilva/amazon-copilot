@@ -5,7 +5,8 @@ def list_categories(
     client: QdrantClient,
     collection_name: str = "amazon_products",
 ) -> dict[str, list[str]]:
-    """Retrieve all main categories and their respective sub-categories from the collection.
+    """Retrieve all main categories and their respective sub-categories from the
+    collection.
 
     Args:
         client: The QdrantClient instance for database operations.
@@ -21,4 +22,4 @@ def list_categories(
         - Sub-categories are sorted alphabetically for consistent output
         - Main categories without sub-categories will have empty lists
     """
-    return client.list_categories(collection_name=collection_name) 
+    return client.list_categories(collection_name=collection_name)

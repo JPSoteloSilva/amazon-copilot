@@ -19,10 +19,11 @@ def list_categories_api(
     client: QdrantClient = qdrant_client_dependency,
 ) -> dict[str, list[str]]:
     """Get all main categories and their respective sub-categories.
-    
-    Returns a dictionary where keys are main categories and values are lists of sub-categories.
+
+    Returns a dictionary where keys are main categories and values are lists of
+    sub-categories.
     Format: {"main_category": ["sub_category1", "sub_category2", ...]}
-    
+
     This endpoint is useful for building category filters and navigation menus.
     """
     try:
@@ -34,4 +35,4 @@ def list_categories_api(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve categories: {str(e)}",
-        ) from e 
+        ) from e

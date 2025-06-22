@@ -238,14 +238,17 @@ class QdrantClient:
         """List or search products with optional filtering and search capabilities.
 
         This method can operate in two modes:
-        1. List mode (query=None): Returns products in database order with optional category filtering
-        2. Search mode (query provided): Performs semantic search with relevance ranking and optional category filtering
+        1. List mode (query=None): Returns products in database order with optional
+        category filtering
+        2. Search mode (query provided): Performs semantic search with relevance ranking
+        and optional category filtering.
 
         Args:
             collection_name: Name of the collection to list/search products from.
             query: Optional search query. If None, returns products in database order.
             main_category: Optional filter by main product category.
-            sub_category: Optional filter by sub product category (requires main_category to be defined).
+            sub_category: Optional filter by sub product category
+            (requires main_category to be defined).
             limit: Maximum number of results to return.
             offset: Offset for pagination.
 
@@ -253,7 +256,8 @@ class QdrantClient:
             List of Product objects.
 
         Raises:
-            ValueError: If sub_category is provided without main_category, or if embedding generation fails.
+            ValueError: If sub_category is provided without main_category, or if
+            embedding generation fails.
         """
         # Validate that main_category is defined if sub_category is defined
         if sub_category and not main_category:
@@ -371,7 +375,8 @@ class QdrantClient:
         self,
         collection_name: str,
     ) -> dict[str, list[str]]:
-        """Get all main categories and their respective sub-categories from the collection.
+        """Get all main categories and their respective sub-categories from the
+        collection.
 
         Args:
             collection_name: Name of the collection to get categories from.
@@ -382,7 +387,7 @@ class QdrantClient:
         categories: dict[str, set[str]] = {}
         offset = 0
         batch_size = 1000  # Process in batches of 1000
-        
+
         while True:
             # Get a batch of products to extract categories
             response = self.client.scroll(
@@ -391,36 +396,33 @@ class QdrantClient:
                 offset=offset,
                 with_payload=True,
             )
-            
+
             records = response[0]
-            
+
             # If no records returned, we've reached the end
             if not records:
                 break
-                
+
             # Process records in this batch
             for record in records:
                 if record.payload is None:
                     continue
-                    
+
                 main_category = record.payload.get("main_category")
                 sub_category = record.payload.get("sub_category")
-                
+
                 if main_category:
                     if main_category not in categories:
                         categories[main_category] = set()
-                    
+
                     if sub_category:
                         categories[main_category].add(sub_category)
-            
+
             # Move to next batch
             offset += batch_size
-        
+
         # Convert sets to sorted lists for consistent output
-        return {
-            main_cat: sorted(list(sub_cats)) 
-            for main_cat, sub_cats in categories.items()
-        }
+        return {main_cat: sorted(sub_cats) for main_cat, sub_cats in categories.items()}
 
     def get_product(self, collection_name: str, product_id: int) -> Product:
         """Get a product from the collection.

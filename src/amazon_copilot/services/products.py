@@ -5,7 +5,7 @@ from amazon_copilot.schemas import AddProductsResponse, Product
 def list_products(
     client: QdrantClient,
     collection_name: str = "amazon_products",
-    limit: int | None = 10,
+    limit: int = 10,
     offset: int = 0,
     query: str | None = None,
     main_category: str | None = None,
@@ -34,11 +34,14 @@ def list_products(
         relevance. If no query, results are in database order.
 
     Note:
-        - When query is None: Returns products in database order with optional category filtering
-        - When query is provided: Performs hybrid search with relevance ranking and optional category filtering
-        - Category filters work in both modes
-        - main_category must be defined if sub_category is defined
-        - When limit is None, all matching results are returned (use with caution for large datasets)
+        - When query is None: Returns products in database order with optional category
+        filtering.
+        - When query is provided: Performs hybrid search with relevance ranking and
+        optional category filtering.
+        - Category filters work in both modes.
+        - main_category must be defined if sub_category is defined.
+        - When limit is None, all matching results are returned (use with caution for
+        large datasets).
     """
     return client.list_products(
         collection_name=collection_name,
