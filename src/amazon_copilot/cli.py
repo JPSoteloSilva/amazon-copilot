@@ -81,12 +81,25 @@ def search_products(
     ),
     main_category: str | None = typer.Option(None, help="Filter by main category"),
     sub_category: str | None = typer.Option(None, help="Filter by sub category"),
+    price_min: float | None = typer.Option(None, help="Minimum price filter"),
+    price_max: float | None = typer.Option(None, help="Maximum price filter"),
     limit: int = typer.Option(10, help="Maximum number of results to return"),
     offset: int = typer.Option(0, help="Offset for pagination"),
 ) -> None:
     """Search for products in Qdrant"""
     client = get_qdrant_client()
-    logger.info(f"Searching for '{query}' in collection '{collection_name}'")
+    price_info = ""
+    if price_min is not None or price_max is not None:
+        price_parts = []
+        if price_min is not None:
+            price_parts.append(f"min: ${price_min}")
+        if price_max is not None:
+            price_parts.append(f"max: ${price_max}")
+        price_info = f" with price range ({', '.join(price_parts)})"
+
+    logger.info(
+        f"Searching for '{query}' in collection '{collection_name}'{price_info}"
+    )
 
     try:
         results = client.search_similar_products(
@@ -94,6 +107,8 @@ def search_products(
             collection_name=collection_name,
             main_category=main_category,
             sub_category=sub_category,
+            price_min=price_min,
+            price_max=price_max,
             limit=limit,
             offset=offset,
         )

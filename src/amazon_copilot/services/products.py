@@ -116,9 +116,12 @@ def search_products(
     offset: int = 0,
     main_category: str | None = None,
     sub_category: str | None = None,
+    price_min: float | None = None,
+    price_max: float | None = None,
 ) -> list[Product]:
-    """Search for products using hybrid vector search with optional category filtering.
-
+    """
+    Search for products using hybrid vector search with optional category and price
+    filtering.
     This function performs semantic search using both dense and sparse embeddings
     to find products most relevant to the query text. Results are ranked by
     relevance using Reciprocal Rank Fusion (RRF).
@@ -132,15 +135,12 @@ def search_products(
         offset: Number of results to skip for pagination. Defaults to 0.
         main_category: Optional filter by main product category (e.g., "Electronics").
         sub_category: Optional filter by sub product category (e.g., "Smartphones").
+        price_min: Optional minimum price filter.
+        price_max: Optional maximum price filter.
 
     Returns:
         List of Product objects ordered by relevance to the search query.
         Empty list if no matching products are found.
-
-    Note:
-        - Uses hybrid search combining dense (semantic) and sparse (keyword) matching
-        - Category filters are applied as exact text matches
-        - Results are automatically reranked for optimal relevance
     """
     return client.search_similar_products(
         query=query,
@@ -149,6 +149,8 @@ def search_products(
         offset=offset,
         main_category=main_category,
         sub_category=sub_category,
+        price_min=price_min,
+        price_max=price_max,
     )
 
 

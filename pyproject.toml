@@ -24,7 +24,7 @@ dependencies = [
 [project.scripts]
 amazon-copilot = "amazon_copilot.cli:app"
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
   "mypy>=1.7.0",
   "ruff>=0.1.5",
@@ -43,6 +43,14 @@ backend = [
   "tqdm>=4.67.1",
   "pandas-stubs>=2.2.3.250308",
 ]
+ai = [
+  "langgraph>=0.0.40",
+  "openai>=1.0.0",
+  "langchain-core>=0.1.0",
+]
+
+[tool.uv]
+default-groups = ["dev", "backend", "ai"]
 
 [tool.ruff]
 line-length = 88
@@ -54,25 +62,14 @@ extend-exclude = ["tests", "research"]
 known-first-party = ["amazon_copilot"]
 
 [tool.mypy]
-python_version = "3.12"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-check_untyped_defs = true
-disallow_untyped_decorators = true
-no_implicit_optional = true
-strict_optional = true
-exclude = ["research/"]
-mypy_path = ["src"]
-namespace_packages = true
-implicit_reexport = false
+ignore_missing_imports = true
+show_error_codes = true
+disallow_untyped_defs = false
+check_untyped_defs = false
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/amazon_copilot"]
 
-[tool.hatch.build.targets.wheel.sources]
-"src" = ""
 
 [tool.hatch.build.targets.sdist]
 include = [

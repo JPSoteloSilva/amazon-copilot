@@ -201,6 +201,8 @@ class QdrantClient:
         collection_name: str,
         main_category: str | None = None,
         sub_category: str | None = None,
+        price_min: float | None = None,
+        price_max: float | None = None,
         limit: int = 10,
         offset: int = 0,
         prefetch_limit: int = 20,
@@ -218,6 +220,8 @@ class QdrantClient:
             collection_name: Name of the collection to search in.
             main_category: Filter by main category if provided.
             sub_category: Filter by sub category if provided.
+            price_min: Minimum price filter
+            price_max: Maximum price filter
             limit: Maximum number of results to return.
             offset: Offset for pagination.
             prefetch_limit: Maximum number of results to return from prefetch.
@@ -242,6 +246,21 @@ class QdrantClient:
                 models.FieldCondition(
                     key="sub_category",
                     match=models.MatchText(text=sub_category),
+                )
+            )
+
+        # Add price filters using actual_price only
+        if price_min is not None:
+            filters.append(
+                models.FieldCondition(
+                    key="actual_price", range=models.Range(gte=price_min)
+                )
+            )
+
+        if price_max is not None:
+            filters.append(
+                models.FieldCondition(
+                    key="actual_price", range=models.Range(lte=price_max)
                 )
             )
 
