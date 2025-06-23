@@ -36,10 +36,13 @@ class QdrantClient:
         self.sparse_model_field_name = self.sparse_model_name.split("/")[-1]
         self.dense_model_field_name = self.dense_model_name.split("/")[-1]
 
+        self.dense_model_dim: int | None = None
         list_of_dense_models = TextEmbedding.list_supported_models()
         for model in list_of_dense_models:
             if model["model"] == self.dense_model_name:
                 self.dense_model_dim = model["dim"]
+                break
+
         if self.dense_model_dim is None:
             raise ValueError(f"Dense model {self.dense_model_name} not found")
 
@@ -68,7 +71,7 @@ class QdrantClient:
 
         vectors_config = {
             self.dense_model_field_name: models.VectorParams(
-                size=self.dense_model_dim,
+                size=self.dense_model_dim,  # type: ignore
                 distance=models.Distance.COSINE,
             ),
         }
@@ -236,16 +239,17 @@ class QdrantClient:
         price_max: float | None = None,
         limit: int = 10,
         offset: int = 0,
+        prefetch_limit: int = 20,
     ) -> list[Product]:
         """List or search products with optional filtering and search capabilities.
 
         This method can operate in two modes:
-        1. List mode (query=None): Returns products in database order with optional
-        category filtering
+        1. List mode (query=None): Returns products with server-side filtering and
+        pagination.
         2. Search mode (query provided): Performs semantic search with relevance ranking
         and optional category filtering.
 
-        Pagination is applied after filtering to ensure correct results.
+        Server-side pagination is applied after filtering to ensure correct results.
 
         Args:
             query: The search query.
@@ -256,6 +260,7 @@ class QdrantClient:
             price_max: Maximum price filter
             limit: Maximum number of results to return.
             offset: Offset for pagination.
+            prefetch_limit: Number of products to prefetch for semantic search.
 
         Returns:
             List of Product objects.
@@ -303,36 +308,26 @@ class QdrantClient:
 
         query_filter = models.Filter(must=filters) if filters else None
 
-        # If no query is provided, use simple scroll (list mode)
         if query is None:
-            all_products: list[Product] = []
-            scroll_offset = 0
-            scroll_limit = 1000  # Process in batches
+            response = self.client.query_points(
+                collection_name=collection_name,
+                query=None,
+                query_filter=query_filter,
+                with_vectors=False,
+                with_payload=True,
+                limit=limit,
+                offset=offset,
+            )
 
-            while True:
-                records, next_offset = self.client.scroll(
-                    collection_name=collection_name,
-                    limit=scroll_limit,
-                    offset=scroll_offset,
-                    scroll_filter=query_filter,
-                )
+            if response.points is None:
+                return []
 
-                # Process records in this batch
-                for record in records:
-                    if record.payload is None:
-                        continue
-                    all_products.append(Product(**record.payload))
-
-                # If there's no next offset, we've reached the end
-                if next_offset is None:
-                    break
-
-                scroll_offset = next_offset
-
-            # Apply pagination manually
-            start_idx = offset
-            end_idx = offset + limit
-            return all_products[start_idx:end_idx]
+            results: list[Product] = []
+            for point in response.points:
+                if point.payload is None:
+                    continue
+                results.append(Product(**point.payload))
+            return results
 
         # If query is provided, use search mode with embeddings
         # Generate embeddings for the query
@@ -358,7 +353,7 @@ class QdrantClient:
             models.Prefetch(
                 query=dense_vectors,  # type: ignore
                 using=self.dense_model_field_name,
-                limit=20,  # prefetch_limit
+                limit=prefetch_limit,
                 filter=query_filter,
             ),
             models.Prefetch(
@@ -367,7 +362,7 @@ class QdrantClient:
                     values=list(sparse_vectors["values"]),
                 ),
                 using=self.sparse_model_field_name,
-                limit=20,  # prefetch_limit
+                limit=prefetch_limit,
                 filter=query_filter,
             ),
         ]
@@ -421,7 +416,7 @@ class QdrantClient:
             Dictionary mapping main categories to their sub-categories.
         """
         categories: dict[str, set[str]] = {}
-        offset = 0
+        offset: int = 0
         batch_size = 1000  # Process in batches of 1000
 
         while True:
@@ -431,6 +426,7 @@ class QdrantClient:
                 limit=batch_size,
                 offset=offset,
                 with_payload=True,
+                with_vectors=False,
             )
 
             # Process records in this batch
