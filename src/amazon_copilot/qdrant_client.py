@@ -295,14 +295,14 @@ class QdrantClient:
         if price_min is not None:
             filters.append(
                 models.FieldCondition(
-                    key="actual_price", range=models.Range(gte=price_min)
+                    key="discount_price", range=models.Range(gte=price_min)
                 )
             )
 
         if price_max is not None:
             filters.append(
                 models.FieldCondition(
-                    key="actual_price", range=models.Range(lte=price_max)
+                    key="discount_price", range=models.Range(lte=price_max)
                 )
             )
 
