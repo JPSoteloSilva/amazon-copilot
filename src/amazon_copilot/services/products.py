@@ -10,6 +10,8 @@ def list_products(
     query: str | None = None,
     main_category: str | None = None,
     sub_category: str | None = None,
+    price_min: float | None = None,
+    price_max: float | None = None,
 ) -> list[Product]:
     """Unified function to retrieve products with optional search and filtering.
 
@@ -28,6 +30,8 @@ def list_products(
             If provided, performs semantic search.
         main_category: Optional filter by main product category (e.g., "Electronics").
         sub_category: Optional filter by sub product category (e.g., "Smartphones").
+        price_min: Optional filter by minimum price.
+        price_max: Optional filter by maximum price.
 
     Returns:
         A list of Product objects. If query is provided, results are ordered by
@@ -48,6 +52,8 @@ def list_products(
         offset=offset,
         main_category=main_category,
         sub_category=sub_category,
+        price_min=price_min,
+        price_max=price_max,
     )
 
 

@@ -28,7 +28,7 @@ from amazon_copilot.services.ai.chatbot.utils import (
     get_collection_prompt,
     get_presentation_prompt,
 )
-from amazon_copilot.services.products import search_products
+from amazon_copilot.services.products import list_products
 from amazon_copilot.utils import get_qdrant_client
 
 # Initialize OpenAI client
@@ -150,7 +150,7 @@ def search_products_node(state: GraphState) -> GraphState:
     """Handle searching products state"""
     if state["preferences"].query:
         qdrant_client = get_qdrant_client()
-        products = search_products(
+        products = list_products(
             client=qdrant_client,
             query=state["preferences"].query,
             collection_name="amazon_products",
