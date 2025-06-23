@@ -40,6 +40,16 @@ def list_products_api(
             "Optional sub category to filter products by (requires main_category)"
         ),
     ),
+    price_min: float | None = Query(
+        None,
+        description="Minimum price filter (in USD)",
+        ge=0,
+    ),
+    price_max: float | None = Query(
+        None,
+        description="Maximum price filter (in USD)",
+        ge=0,
+    ),
     client: QdrantClient = qdrant_client_dependency,
 ) -> list[Product]:
     """Unified endpoint for listing and searching products.
@@ -63,6 +73,8 @@ def list_products_api(
             query=query,
             main_category=main_category,
             sub_category=sub_category,
+            price_min=price_min,
+            price_max=price_max,
         )
     except ValueError as e:
         raise HTTPException(

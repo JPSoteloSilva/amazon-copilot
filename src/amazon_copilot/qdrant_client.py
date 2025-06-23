@@ -232,6 +232,8 @@ class QdrantClient:
         query: str | None = None,
         main_category: str | None = None,
         sub_category: str | None = None,
+        price_min: float | None = None,
+        price_max: float | None = None,
         limit: int = 10,
         offset: int = 0,
     ) -> list[Product]:
@@ -246,11 +248,12 @@ class QdrantClient:
         Pagination is applied after filtering to ensure correct results.
 
         Args:
-            collection_name: Name of the collection to list/search products from.
-            query: Optional search query. If None, returns products in database order.
-            main_category: Optional filter by main product category.
-            sub_category: Optional filter by sub product category
-            (requires main_category to be defined).
+            query: The search query.
+            collection_name: Name of the collection to search in.
+            main_category: Filter by main category if provided.
+            sub_category: Filter by sub category if provided.
+            price_min: Minimum price filter
+            price_max: Maximum price filter
             limit: Maximum number of results to return.
             offset: Offset for pagination.
 
@@ -280,6 +283,21 @@ class QdrantClient:
                 models.FieldCondition(
                     key="sub_category",
                     match=models.MatchText(text=sub_category),
+                )
+            )
+
+        # Add price filters using actual_price only
+        if price_min is not None:
+            filters.append(
+                models.FieldCondition(
+                    key="actual_price", range=models.Range(gte=price_min)
+                )
+            )
+
+        if price_max is not None:
+            filters.append(
+                models.FieldCondition(
+                    key="actual_price", range=models.Range(lte=price_max)
                 )
             )
 
