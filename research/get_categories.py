@@ -16,14 +16,15 @@ df["main_category"].unique()
 # list the unique values of the sub_category column
 df["sub_category"].unique()
 # %%
-# can we dump the data into a json file like {main_category: [sub_category1, sub_category2, ...], sub_category: [sub_category1, sub_category2, ...]}
-json_categories = {
-    "main_category": list(df["main_category"].unique()),
-    "sub_category": list(df["sub_category"].unique()),
-}
+# create a mapping of main_category to sub_categories
+category_mapping = {}
+for main_cat in df["main_category"].unique():
+    sub_cats = df[df["main_category"] == main_cat]["sub_category"].unique().tolist()
+    category_mapping[main_cat] = sub_cats
+
 # %%
 import json
-# dump the json file
+# dump the json file with proper mapping
 with open("data/categories.json", "w") as f:
-    json.dump(json_categories, f)
+    json.dump(category_mapping, f, indent=2)
 # %%

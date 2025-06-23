@@ -1,13 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, status
 
-from amazon_copilot.qdrant_client import QdrantClient
 from amazon_copilot.services.categories import list_categories
-from amazon_copilot.utils import get_qdrant_client
 
 router = APIRouter(prefix="/categories", tags=["categories"])
-
-# Module-level singleton for dependency
-qdrant_client_dependency = Depends(get_qdrant_client)
 
 
 @router.get("/", response_model=dict[str, list[str]], status_code=status.HTTP_200_OK)
@@ -16,7 +11,6 @@ def list_categories_api(
         "amazon_products",
         description="Name of the collection to get categories from",
     ),
-    client: QdrantClient = qdrant_client_dependency,
 ) -> dict[str, list[str]]:
     """Get all main categories and their respective sub-categories.
 
@@ -27,10 +21,7 @@ def list_categories_api(
     This endpoint is useful for building category filters and navigation menus.
     """
     try:
-        return list_categories(
-            client=client,
-            collection_name=collection_name,
-        )
+        return list_categories(collection_name)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

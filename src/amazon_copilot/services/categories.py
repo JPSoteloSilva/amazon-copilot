@@ -1,17 +1,9 @@
-from amazon_copilot.qdrant_client import QdrantClient
+import json
 
 
-def list_categories(
-    client: QdrantClient,
-    collection_name: str = "amazon_products",
-) -> dict[str, list[str]]:
+def list_categories(collection_name: str) -> dict[str, list[str]]:
     """Retrieve all main categories and their respective sub-categories from the
-    collection.
-
-    Args:
-        client: The QdrantClient instance for database operations.
-        collection_name: Name of the Qdrant collection to get categories from.
-            Defaults to "amazon_products".
+    categories.json file.
 
     Returns:
         Dictionary mapping main categories to their sorted list of sub-categories.
@@ -22,4 +14,8 @@ def list_categories(
         - Sub-categories are sorted alphabetically for consistent output
         - Main categories without sub-categories will have empty lists
     """
-    return client.list_categories(collection_name=collection_name)
+    if collection_name == "amazon_products":
+        with open("src/amazon_copilot/services/data/categories.json") as f:
+            return json.load(f)
+    else:
+        raise ValueError(f"Collection name {collection_name} not found")

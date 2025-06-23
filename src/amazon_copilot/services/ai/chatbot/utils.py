@@ -10,7 +10,7 @@ from amazon_copilot.services.ai.chatbot.schemas import (
 
 # Get the directory where this file is located
 PROMPTS_DIR = Path(__file__).parent / "prompts"
-CATEGORIES_FILE = PROMPTS_DIR / "categories.json"
+CATEGORIES_FILE = "src/amazon_copilot/services/data/categories.json"
 
 
 def load_prompt(filename: str) -> str:
@@ -24,7 +24,7 @@ def load_categories() -> list[str]:
     """Load main categories from categories.json file."""
     with open(CATEGORIES_FILE, encoding="utf-8") as file:
         categories_data = json.load(file)
-        return categories_data["main_category"]
+        return categories_data.keys()
 
 
 def get_collection_prompt() -> str:

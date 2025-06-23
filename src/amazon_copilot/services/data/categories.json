@@ -1,0 +1,154 @@
+{
+  "appliances": [
+    "Air Conditioners",
+    "All Appliances",
+    "Heating & Cooling Appliances",
+    "Kitchen & Home Appliances",
+    "Refrigerators",
+    "Washing Machines"
+  ],
+  "car & motorbike": [
+    "All Car & Motorbike Products",
+    "Car & Bike Care",
+    "Car Accessories",
+    "Car Electronics",
+    "Car Parts",
+    "Motorbike Accessories & Parts"
+  ],
+  "tv, audio & cameras": [
+    "All Electronics",
+    "Camera Accessories",
+    "Cameras",
+    "Headphones",
+    "Home Audio & Theater",
+    "Home Entertainment Systems",
+    "Security Cameras",
+    "Speakers",
+    "Televisions"
+  ],
+  "sports & fitness": [
+    "All Exercise & Fitness",
+    "All Sports, Fitness & Outdoors",
+    "Badminton",
+    "Camping & Hiking",
+    "Cardio Equipment",
+    "Cricket",
+    "Cycling",
+    "Fitness Accessories",
+    "Football",
+    "Running",
+    "Strength Training",
+    "Yoga"
+  ],
+  "grocery & gourmet foods": [
+    "All Grocery & Gourmet Foods",
+    "Coffee, Tea & Beverages",
+    "Snack Foods"
+  ],
+  "home & kitchen": [
+    "All Home & Kitchen",
+    "Bedroom Linen",
+    "Furniture",
+    "Garden & Outdoors",
+    "Home D\u00e9cor",
+    "Home Furnishing",
+    "Home Improvement",
+    "Home Storage",
+    "Indoor Lighting",
+    "Kitchen & Dining",
+    "Kitchen Storage & Containers",
+    "Sewing & Craft Supplies"
+  ],
+  "pet supplies": [
+    "All Pet Supplies",
+    "Dog supplies"
+  ],
+  "stores": [
+    "Amazon Fashion",
+    "Fashion Sales & Deals",
+    "Men's Fashion",
+    "Sportswear",
+    "The Designer Boutique",
+    "Women's Fashion"
+  ],
+  "toys & baby products": [
+    "Baby Bath, Skin & Grooming",
+    "Baby Products",
+    "Diapers",
+    "International Toy Store",
+    "Nursing & Feeding",
+    "STEM Toys Store",
+    "Strollers & Prams",
+    "Toys & Games",
+    "Toys Gifting Store"
+  ],
+  "kids' fashion": [
+    "Baby Fashion",
+    "Kids' Clothing",
+    "Kids' Fashion",
+    "Kids' Shoes",
+    "Kids' Watches",
+    "School Bags"
+  ],
+  "bags & luggage": [
+    "Backpacks",
+    "Rucksacks",
+    "Suitcases & Trolley Bags",
+    "Travel Accessories",
+    "Travel Duffles",
+    "Wallets"
+  ],
+  "accessories": [
+    "Bags & Luggage",
+    "Fashion & Silver Jewellery",
+    "Gold & Diamond Jewellery",
+    "Handbags & Clutches",
+    "Jewellery",
+    "Sunglasses",
+    "Watches"
+  ],
+  "women's shoes": [
+    "Ballerinas",
+    "Fashion Sandals",
+    "Shoes"
+  ],
+  "beauty & health": [
+    "Beauty & Grooming",
+    "Diet & Nutrition",
+    "Health & Personal Care",
+    "Household Supplies",
+    "Luxury Beauty",
+    "Make-up",
+    "Personal Care Appliances",
+    "Value Bazaar"
+  ],
+  "men's shoes": [
+    "Casual Shoes",
+    "Formal Shoes",
+    "Sports Shoes"
+  ],
+  "women's clothing": [
+    "Clothing",
+    "Ethnic Wear",
+    "Lingerie & Nightwear",
+    "Western Wear"
+  ],
+  "industrial supplies": [
+    "Industrial & Scientific Supplies",
+    "Janitorial & Sanitation Supplies",
+    "Lab & Scientific",
+    "Test, Measure & Inspect"
+  ],
+  "men's clothing": [
+    "Innerwear",
+    "Jeans",
+    "Shirts",
+    "T-shirts & Polos"
+  ],
+  "music": [
+    "Musical Instruments & Professional Audio"
+  ],
+  "home, kitchen, pets": [
+    "Refurbished & Open Box"
+  ]
+}
