@@ -6,6 +6,8 @@ class UserPreferences(BaseModel):
     main_category: str | None = None
     price_min: float | None = None
     price_max: float | None = None
+    color: str | None = None
+    brand: str | None = None
 
 
 class CollectionResponse(BaseModel):

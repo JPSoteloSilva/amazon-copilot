@@ -58,6 +58,8 @@ def has_sufficient_preferences(preferences: UserPreferences) -> bool:
             preferences.main_category is not None,
             preferences.price_min is not None,
             preferences.price_max is not None,
+            preferences.color is not None,
+            preferences.brand is not None,
         ]
     )
 
@@ -150,9 +152,15 @@ def search_products_node(state: GraphState) -> GraphState:
     """Handle searching products state"""
     if state["preferences"].query:
         qdrant_client = get_qdrant_client()
+        query = state["preferences"].query
+        if state["preferences"].color:
+            query += f" {state['preferences'].color}"
+        if state["preferences"].brand:
+            query += f" {state['preferences'].brand}"
+
         products = list_products(
             client=qdrant_client,
-            query=state["preferences"].query,
+            query=query,
             collection_name="amazon_products",
             limit=NUM_PRODUCTS_TO_PRESENT,
             main_category=state["preferences"].main_category,
