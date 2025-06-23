@@ -239,7 +239,7 @@ class QdrantClient:
         price_max: float | None = None,
         limit: int = 10,
         offset: int = 0,
-        prefetch_limit: int = 20,
+        prefetch_limit: int = 200,
     ) -> list[Product]:
         """List or search products with optional filtering and search capabilities.
 
