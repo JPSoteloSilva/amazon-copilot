@@ -102,7 +102,7 @@ def search_products(
     )
 
     try:
-        results = client.search_similar_products(
+        results = client.list_products(
             query=query,
             collection_name=collection_name,
             main_category=main_category,

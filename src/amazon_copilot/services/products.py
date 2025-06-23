@@ -7,35 +7,54 @@ def list_products(
     collection_name: str = "amazon_products",
     limit: int = 10,
     offset: int = 0,
+    query: str | None = None,
+    main_category: str | None = None,
+    sub_category: str | None = None,
+    price_min: float | None = None,
+    price_max: float | None = None,
 ) -> list[Product]:
-    """Retrieve a paginated list of products from the vector database.
+    """Unified function to retrieve products with optional search and filtering.
 
-    This function provides pagination support for browsing through the product
-    collection without requiring a search query.
+    This function can either list all products (when query is None) or search for
+    products based on a query (when query is provided). Category filtering can be
+    applied in both modes.
 
     Args:
         client: The QdrantClient instance for database operations.
         collection_name: Name of the Qdrant collection containing products.
             Defaults to "amazon_products".
-        limit: Maximum number of products to retrieve (1-100). Defaults to 10.
+        limit: Maximum number of products to retrieve. If None, returns all results.
+            Defaults to 10.
         offset: Number of products to skip for pagination. Defaults to 0.
+        query: Optional search query text. If None, returns all products.
+            If provided, performs semantic search.
+        main_category: Optional filter by main product category (e.g., "Electronics").
+        sub_category: Optional filter by sub product category (e.g., "Smartphones").
+        price_min: Optional filter by minimum price.
+        price_max: Optional filter by maximum price.
 
     Returns:
-        A list of Product objects containing product information including
-        ID, name, categories, pricing, and ratings.
+        A list of Product objects. If query is provided, results are ordered by
+        relevance. If no query, results are in database order.
 
     Note:
-        Results are returned in the order they exist in the database.
-        Use search_products() for relevance-based ordering.
+        - When query is None: Returns products in database order with optional category
+        filtering.
+        - When query is provided: Performs hybrid search with relevance ranking and
+        optional category filtering.
+        - Category filters work in both modes.
+        - main_category must be defined if sub_category is defined.
     """
-    # Use empty query to get all products
-    responses = client.list_products(
+    return client.list_products(
         collection_name=collection_name,
+        query=query,
         limit=limit,
         offset=offset,
+        main_category=main_category,
+        sub_category=sub_category,
+        price_min=price_min,
+        price_max=price_max,
     )
-
-    return responses
 
 
 def get_product(
@@ -106,52 +125,6 @@ def add_products(
         prevent_duplicates=prevent_duplicates,
     )
     return AddProductsResponse(successful=successful_adds, failed=failed_products)
-
-
-def search_products(
-    client: QdrantClient,
-    query: str,
-    collection_name: str = "amazon_products",
-    limit: int = 10,
-    offset: int = 0,
-    main_category: str | None = None,
-    sub_category: str | None = None,
-    price_min: float | None = None,
-    price_max: float | None = None,
-) -> list[Product]:
-    """
-    Search for products using hybrid vector search with optional category and price
-    filtering.
-    This function performs semantic search using both dense and sparse embeddings
-    to find products most relevant to the query text. Results are ranked by
-    relevance using Reciprocal Rank Fusion (RRF).
-
-    Args:
-        client: The QdrantClient instance for database operations.
-        query: Search query text to find relevant products.
-        collection_name: Name of the Qdrant collection to search.
-            Defaults to "amazon_products".
-        limit: Maximum number of results to return. Defaults to 10.
-        offset: Number of results to skip for pagination. Defaults to 0.
-        main_category: Optional filter by main product category (e.g., "Electronics").
-        sub_category: Optional filter by sub product category (e.g., "Smartphones").
-        price_min: Optional minimum price filter.
-        price_max: Optional maximum price filter.
-
-    Returns:
-        List of Product objects ordered by relevance to the search query.
-        Empty list if no matching products are found.
-    """
-    return client.search_similar_products(
-        query=query,
-        collection_name=collection_name,
-        limit=limit,
-        offset=offset,
-        main_category=main_category,
-        sub_category=sub_category,
-        price_min=price_min,
-        price_max=price_max,
-    )
 
 
 def delete_product(

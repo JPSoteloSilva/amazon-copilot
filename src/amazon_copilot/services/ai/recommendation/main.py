@@ -27,17 +27,19 @@ def recommend_products(
     messages: list[ChatCompletionMessageParam] = [
         {
             "role": "system",
-            "content": (
-                f"You are an assistant that works with a customer's cart. "
-                f"Generate up to {limit} complementary Amazon products. "
-                "Return your answer as a JSON object with a single key 'queries' whose "
-                "value is an array of strings, each string being one "
-                "complementary-product idea."
-            ),
+            "content": f"""
+                You are an assistant that works with a customer's cart.
+                Generate up to {limit} complementary Amazon products.
+                Return your answer as a JSON object with a single key 'queries' whose
+                value is an array of strings, each string being one
+                complementary-product idea.
+                Make sure to not recommend products that are already in the cart or are
+                too similar to the products in the cart.
+            """,
         },
         {
             "role": "user",
-            "content": (f"The cart contains: {cart_summary}. "),
+            "content": f"The cart contains: {cart_summary}.",
         },
     ]
 
@@ -76,9 +78,11 @@ def recommend_products(
     results = []
     for item in ideas:
         try:
-            print(item)
-            qdrant_item = qdrant_client.search_similar_products(
-                query=item, collection_name=collection_name, limit=1
+            qdrant_item = qdrant_client.list_products(
+                query=item,
+                collection_name=collection_name,
+                limit=1,
+                prefetch_limit=10,
             )
             results.extend(qdrant_item)
         except Exception:
@@ -87,7 +91,7 @@ def recommend_products(
     if len(results) < limit:
         # If we don't have enough results, we need to get more
         try:
-            more_items = qdrant_client.search_similar_products(
+            more_items = qdrant_client.list_products(
                 query=query, collection_name=collection_name, limit=limit
             )
             results.extend(more_items)

@@ -55,10 +55,12 @@ default-groups = ["dev", "backend", "ai"]
 [tool.ruff]
 line-length = 88
 target-version = "py312"
-select = ["E", "F", "I", "N", "W", "B", "C4", "UP"]
 extend-exclude = ["tests", "research"]
 
-[tool.ruff.isort]
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "B", "C4", "UP"]
+
+[tool.ruff.lint.isort]
 known-first-party = ["amazon_copilot"]
 
 [tool.mypy]

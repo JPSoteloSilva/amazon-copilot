@@ -36,10 +36,13 @@ class QdrantClient:
         self.sparse_model_field_name = self.sparse_model_name.split("/")[-1]
         self.dense_model_field_name = self.dense_model_name.split("/")[-1]
 
+        self.dense_model_dim: int | None = None
         list_of_dense_models = TextEmbedding.list_supported_models()
         for model in list_of_dense_models:
             if model["model"] == self.dense_model_name:
                 self.dense_model_dim = model["dim"]
+                break
+
         if self.dense_model_dim is None:
             raise ValueError(f"Dense model {self.dense_model_name} not found")
 
@@ -68,7 +71,7 @@ class QdrantClient:
 
         vectors_config = {
             self.dense_model_field_name: models.VectorParams(
-                size=self.dense_model_dim,
+                size=self.dense_model_dim,  # type: ignore
                 distance=models.Distance.COSINE,
             ),
         }
@@ -195,151 +198,6 @@ class QdrantClient:
 
         return successful_products, failed_products
 
-    def search_similar_products(
-        self,
-        query: str,
-        collection_name: str,
-        main_category: str | None = None,
-        sub_category: str | None = None,
-        price_min: float | None = None,
-        price_max: float | None = None,
-        limit: int = 10,
-        offset: int = 0,
-        prefetch_limit: int = 20,
-        with_vectors: bool = False,
-        with_payload: bool = True,
-    ) -> list[Product]:
-        """Search for products similar to the query using hybrid search with reranking.
-
-        This implementation follows the two-stage approach:
-        1. First retrieval: Use prefetch with dense and sparse vectors to get candidates
-        2. Reranking: Use late interaction model to rerank the candidates
-
-        Args:
-            query: The search query.
-            collection_name: Name of the collection to search in.
-            main_category: Filter by main category if provided.
-            sub_category: Filter by sub category if provided.
-            price_min: Minimum price filter
-            price_max: Maximum price filter
-            limit: Maximum number of results to return.
-            offset: Offset for pagination.
-            prefetch_limit: Maximum number of results to return from prefetch.
-            with_vectors: Whether to return vectors.
-            with_payload: Whether to return payload.
-
-        Returns:
-            Dictionary with results and pagination information.
-        """
-        # Prepare filter if categories are specified
-        filters: list[models.Condition] = []
-        if main_category:
-            filters.append(
-                models.FieldCondition(
-                    key="main_category",
-                    match=models.MatchText(text=main_category),
-                )
-            )
-
-        if sub_category:
-            filters.append(
-                models.FieldCondition(
-                    key="sub_category",
-                    match=models.MatchText(text=sub_category),
-                )
-            )
-
-        # Add price filters using actual_price only
-        if price_min is not None:
-            filters.append(
-                models.FieldCondition(
-                    key="actual_price", range=models.Range(gte=price_min)
-                )
-            )
-
-        if price_max is not None:
-            filters.append(
-                models.FieldCondition(
-                    key="actual_price", range=models.Range(lte=price_max)
-                )
-            )
-
-        if filters:
-            query_filter = models.Filter(must=filters)
-        else:
-            query_filter = None
-
-        # Generate embeddings for the query
-        dense_embedding_iter = iter(self.dense_embedder.query_embed(query))
-        try:
-            dense_vectors = next(dense_embedding_iter).tolist()
-        except StopIteration as e:
-            raise ValueError(
-                "Dense embedding generation failed: ",
-                "no embeddings returned for the query.",
-            ) from e
-
-        sparse_embedding_iter = iter(self.sparse_embedder.query_embed(query))
-        try:
-            sparse_vectors = next(sparse_embedding_iter).as_object()
-        except StopIteration as e:
-            raise ValueError(
-                "Sparse embedding generation failed: ",
-                "no embeddings returned for the query.",
-            ) from e
-        prefetch = [
-            models.Prefetch(
-                query=dense_vectors,  # type: ignore
-                using=self.dense_model_field_name,
-                limit=prefetch_limit,
-                filter=query_filter,
-            ),
-            models.Prefetch(
-                query=models.SparseVector(
-                    indices=list(sparse_vectors["indices"]),
-                    values=list(sparse_vectors["values"]),
-                ),
-                using=self.sparse_model_field_name,
-                limit=prefetch_limit,
-                filter=query_filter,
-            ),
-        ]
-
-        # Execute search with reranking
-        response = self.client.query_points(
-            collection_name=collection_name,
-            prefetch=prefetch,
-            query=models.FusionQuery(fusion=models.Fusion.RRF),
-            with_vectors=with_vectors,
-            with_payload=with_payload,
-            limit=limit,
-            offset=offset,
-            query_filter=query_filter,
-        )
-
-        if response.points is None:
-            return []
-        else:
-            results: list[Product] = []
-            for point in response.points:
-                if point.payload is None:
-                    continue
-                results.append(
-                    Product(
-                        id=int(point.id),
-                        name=point.payload["name"],
-                        main_category=point.payload["main_category"],
-                        sub_category=point.payload["sub_category"],
-                        image=point.payload["image"],
-                        link=point.payload["link"],
-                        ratings=point.payload["ratings"],
-                        no_of_ratings=point.payload["no_of_ratings"],
-                        discount_price=point.payload["discount_price"],
-                        actual_price=point.payload["actual_price"],
-                    )
-                )
-            return results
-
     def get_collection_info(self, collection_name: str) -> CollectionInfo:
         """Get information about a collection.
 
@@ -374,30 +232,227 @@ class QdrantClient:
     def list_products(
         self,
         collection_name: str,
+        query: str | None = None,
+        main_category: str | None = None,
+        sub_category: str | None = None,
+        price_min: float | None = None,
+        price_max: float | None = None,
         limit: int = 10,
         offset: int = 0,
+        prefetch_limit: int = 200,
     ) -> list[Product]:
-        """List products from the collection.
+        """List or search products with optional filtering and search capabilities.
+
+        This method can operate in two modes:
+        1. List mode (query=None): Returns products with server-side filtering and
+        pagination.
+        2. Search mode (query provided): Performs semantic search with relevance ranking
+        and optional category filtering.
+
+        Server-side pagination is applied after filtering to ensure correct results.
 
         Args:
-            collection_name: Name of the collection to list products from.
-            limit: Maximum number of products to return.
-            offset: Number of products to skip.
+            query: The search query.
+            collection_name: Name of the collection to search in.
+            main_category: Filter by main category if provided.
+            sub_category: Filter by sub category if provided.
+            price_min: Minimum price filter
+            price_max: Maximum price filter
+            limit: Maximum number of results to return.
+            offset: Offset for pagination.
+            prefetch_limit: Number of products to prefetch for semantic search.
 
         Returns:
             List of Product objects.
+
+        Raises:
+            ValueError: If sub_category is provided without main_category, or if
+            embedding generation fails.
         """
-        response = self.client.scroll(
+        # Validate that main_category is defined if sub_category is defined
+        if sub_category and not main_category:
+            raise ValueError("main_category must be defined if sub_category is defined")
+
+        # Prepare filter if categories are specified
+        filters: list[models.Condition] = []
+        if main_category:
+            filters.append(
+                models.FieldCondition(
+                    key="main_category",
+                    match=models.MatchText(text=main_category),
+                )
+            )
+
+        if sub_category:
+            filters.append(
+                models.FieldCondition(
+                    key="sub_category",
+                    match=models.MatchText(text=sub_category),
+                )
+            )
+
+        # Add price filters using actual_price only
+        if price_min is not None:
+            filters.append(
+                models.FieldCondition(
+                    key="actual_price", range=models.Range(gte=price_min)
+                )
+            )
+
+        if price_max is not None:
+            filters.append(
+                models.FieldCondition(
+                    key="actual_price", range=models.Range(lte=price_max)
+                )
+            )
+
+        query_filter = models.Filter(must=filters) if filters else None
+
+        if query is None:
+            response = self.client.query_points(
+                collection_name=collection_name,
+                query=None,
+                query_filter=query_filter,
+                with_vectors=False,
+                with_payload=True,
+                limit=limit,
+                offset=offset,
+            )
+
+            if response.points is None:
+                return []
+
+            results: list[Product] = []
+            for point in response.points:
+                if point.payload is None:
+                    continue
+                results.append(Product(**point.payload))
+            return results
+
+        # If query is provided, use search mode with embeddings
+        # Generate embeddings for the query
+        dense_embedding_iter = iter(self.dense_embedder.query_embed(query))
+        try:
+            dense_vectors = next(dense_embedding_iter).tolist()
+        except StopIteration as e:
+            raise ValueError(
+                "Dense embedding generation failed: ",
+                "no embeddings returned for the query.",
+            ) from e
+
+        sparse_embedding_iter = iter(self.sparse_embedder.query_embed(query))
+        try:
+            sparse_vectors = next(sparse_embedding_iter).as_object()
+        except StopIteration as e:
+            raise ValueError(
+                "Sparse embedding generation failed: ",
+                "no embeddings returned for the query.",
+            ) from e
+
+        prefetch = [
+            models.Prefetch(
+                query=dense_vectors,  # type: ignore
+                using=self.dense_model_field_name,
+                limit=prefetch_limit,
+                filter=query_filter,
+            ),
+            models.Prefetch(
+                query=models.SparseVector(
+                    indices=list(sparse_vectors["indices"]),
+                    values=list(sparse_vectors["values"]),
+                ),
+                using=self.sparse_model_field_name,
+                limit=prefetch_limit,
+                filter=query_filter,
+            ),
+        ]
+
+        # Execute search with reranking
+        response = self.client.query_points(
             collection_name=collection_name,
+            prefetch=prefetch,
+            query=models.FusionQuery(fusion=models.Fusion.RRF),
+            with_vectors=False,
+            with_payload=True,
             limit=limit,
             offset=offset,
+            query_filter=query_filter,
         )
-        results: list[Product] = []
-        for record in response[0]:
-            if record.payload is None:
-                continue
-            results.append(Product(**record.payload))
-        return results
+
+        if response.points is None:
+            return []
+        else:
+            results: list[Product] = []
+            for point in response.points:
+                if point.payload is None:
+                    continue
+                results.append(
+                    Product(
+                        id=int(point.id),
+                        name=point.payload["name"],
+                        main_category=point.payload["main_category"],
+                        sub_category=point.payload["sub_category"],
+                        image=point.payload["image"],
+                        link=point.payload["link"],
+                        ratings=point.payload["ratings"],
+                        no_of_ratings=point.payload["no_of_ratings"],
+                        discount_price=point.payload["discount_price"],
+                        actual_price=point.payload["actual_price"],
+                    )
+                )
+            return results
+
+    def list_categories(
+        self,
+        collection_name: str,
+    ) -> dict[str, list[str]]:
+        """Get all main categories and their respective sub-categories from the
+        collection.
+
+        Args:
+            collection_name: Name of the collection to get categories from.
+
+        Returns:
+            Dictionary mapping main categories to their sub-categories.
+        """
+        categories: dict[str, set[str]] = {}
+        offset: int = 0
+        batch_size = 1000  # Process in batches of 1000
+
+        while True:
+            # Get a batch of products to extract categories
+            records, next_offset = self.client.scroll(
+                collection_name=collection_name,
+                limit=batch_size,
+                offset=offset,
+                with_payload=True,
+                with_vectors=False,
+            )
+
+            # Process records in this batch
+            for record in records:
+                if record.payload is None:
+                    continue
+
+                main_category = record.payload.get("main_category")
+                sub_category = record.payload.get("sub_category")
+
+                if main_category:
+                    if main_category not in categories:
+                        categories[main_category] = set()
+
+                    if sub_category:
+                        categories[main_category].add(sub_category)
+
+            # If there's no next offset, we've reached the end
+            if next_offset is None:
+                break
+
+            # Move to next batch using the next offset
+            offset = next_offset
+
+        # Convert sets to sorted lists for consistent output
+        return {main_cat: sorted(sub_cats) for main_cat, sub_cats in categories.items()}
 
     def get_product(self, collection_name: str, product_id: int) -> Product:
         """Get a product from the collection.

@@ -7,7 +7,6 @@ from amazon_copilot.services.products import (
     delete_product,
     get_product,
     list_products,
-    search_products,
 )
 from amazon_copilot.utils import get_qdrant_client
 
@@ -24,36 +23,22 @@ def list_products_api(
         description="Name of the collection to retrieve products from",
     ),
     limit: int = Query(
-        10, description="Maximum number of products to retrieve", ge=1, le=100
+        10,
+        description="Maximum number of products to retrieve.",
+        ge=1,
     ),
     offset: int = Query(0, description="Number of products to skip", ge=0),
-    client: QdrantClient = qdrant_client_dependency,
-) -> list[Product]:
-    try:
-        return list_products(
-            client=client, collection_name=collection_name, limit=limit, offset=offset
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve products: {str(e)}",
-        ) from e
-
-
-@router.get("/search", response_model=list[Product], status_code=status.HTTP_200_OK)
-def search_products_api(
-    query: str,
-    collection_name: str = Query(
-        "amazon_products",
-        description="Name of the collection to search products in",
+    query: str | None = Query(
+        None, description="Optional search query. If provided, performs semantic search"
     ),
-    limit: int = Query(10, description="Maximum number of products to return"),
-    offset: int = Query(0, description="Number of products to skip"),
     main_category: str | None = Query(
-        None, description="Main category to filter products by"
+        None, description="Optional main category to filter products by"
     ),
     sub_category: str | None = Query(
-        None, description="Sub category to filter products by"
+        None,
+        description=(
+            "Optional sub category to filter products by (requires main_category)"
+        ),
     ),
     price_min: float | None = Query(
         None,
@@ -67,22 +52,38 @@ def search_products_api(
     ),
     client: QdrantClient = qdrant_client_dependency,
 ) -> list[Product]:
+    """Unified endpoint for listing and searching products.
+
+    This endpoint can be used in two modes:
+    1. List mode (query=None): Returns all products with optional category filtering
+    2. Search mode (query provided): Performs semantic search with relevance ranking
+    and optional category filtering
+
+    Pagination is applied after filtering to ensure correct results when using both
+    filters and pagination parameters.
+
+    Note: main_category must be defined if sub_category is defined.
+    """
     try:
-        return search_products(
+        return list_products(
             client=client,
-            query=query,
             collection_name=collection_name,
             limit=limit,
             offset=offset,
+            query=query,
             main_category=main_category,
             sub_category=sub_category,
             price_min=price_min,
             price_max=price_max,
         )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+        ) from e
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to search products: {str(e)}",
+            detail=f"Failed to retrieve products: {str(e)}",
         ) from e
 
 
