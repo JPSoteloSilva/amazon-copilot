@@ -25,10 +25,10 @@ Your task is to generate ONE complete message that includes:
    - Specifically mention the key preferences collected from the user
 
 2. **Individual Product Descriptions**:
-   - For each product, use the placeholder format: <PRODUCT ID> where ID is the actual product ID
    - Present products in the EXACT SAME ORDER as they appear in the products list above
-   - After each placeholder, provide a detailed description of that specific product
-   - Include the product name and highlight key features like:
+   - Refer to products naturally (e.g., "The first product", "Another great option", "The third recommendation")
+   - Provide a detailed description of each specific product including:
+     - Product name and highlight key features like:
      - Main category and subcategory
      - Price information (discount_price, actual_price if different)
      - Ratings and number of ratings
@@ -38,26 +38,22 @@ Your task is to generate ONE complete message that includes:
    - DO NOT mention product links or images
    - Focus only on features that matter to the customer
 
-REQUIRED FORMAT:
+EXAMPLE FORMAT:
 ```
 General introduction message here...
 
-<PRODUCT 123>:
-Detailed description of the product with ID 123 here...
+The first product I'd recommend is [Product Name]. This [category] offers [key features and benefits]. It's priced at [price] and has [rating] stars from [number] customers. What makes this particularly suitable for you is [alignment with preferences].
 
-<PRODUCT 456>:
-Detailed description of the product with ID 456 here...
+Another excellent option is [Product Name]. This [description and features]. At [price], it provides great value and has earned [rating] stars. This would work well for your needs because [specific benefits].
 
-<PRODUCT 789>:
-Detailed description of the product with ID 789 here...
+The third recommendation is [Product Name]...
 ```
 
 CRITICAL REQUIREMENTS:
-- You MUST use the actual product ID in the placeholder format: <PRODUCT [ID]>
-- You MUST include one placeholder for EACH product provided
 - You MUST present products in the SAME ORDER as shown in the products list
 - Each product description should be detailed and engaging
-- The product IDs in placeholders will be used to map back to the actual products
+- Use natural language to introduce each product
+- Focus on how each product meets the user's specific preferences
 
 The output should be in the format of the following schema:
 {schema}
