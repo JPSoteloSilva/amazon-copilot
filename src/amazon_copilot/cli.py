@@ -151,6 +151,9 @@ def load_products(
     prevent_duplicates: bool = typer.Option(
         True, help="Prevent adding products with IDs that already exist"
     ),
+    validate_images: bool = typer.Option(
+        True, help="Validate image URLs and filter out products with invalid images"
+    ),
 ) -> None:
     """Load products from CSV into Qdrant"""
     if not os.path.exists(data_path):
@@ -162,7 +165,9 @@ def load_products(
         f"Loading products from '{data_path}' into collection '{collection_name}'"
     )
 
-    products = load_data(data_path, nrows=nrows, skiprows=skiprows)
+    products = load_data(
+        data_path, nrows=nrows, skiprows=skiprows, validate_images=validate_images
+    )
 
     try:
         response = add_products(

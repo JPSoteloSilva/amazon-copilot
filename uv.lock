@@ -30,6 +30,7 @@ backend = [
     { name = "pandas" },
     { name = "pandas-stubs" },
     { name = "qdrant-client" },
+    { name = "requests" },
     { name = "tqdm" },
     { name = "types-tqdm" },
 ]
@@ -63,6 +64,7 @@ backend = [
     { name = "pandas", specifier = ">=2.0.0" },
     { name = "pandas-stubs", specifier = ">=2.2.3.250308" },
     { name = "qdrant-client", specifier = ">=1.6.0" },
+    { name = "requests", specifier = ">=2.32.4" },
     { name = "tqdm", specifier = ">=4.67.1" },
     { name = "types-tqdm", specifier = ">=4.67.0.20250417" },
 ]

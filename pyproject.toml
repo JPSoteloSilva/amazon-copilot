@@ -42,6 +42,7 @@ backend = [
   "types-tqdm>=4.67.0.20250417",
   "tqdm>=4.67.1",
   "pandas-stubs>=2.2.3.250308",
+  "requests>=2.32.4",
 ]
 ai = [
   "langgraph>=0.0.40",
