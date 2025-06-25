@@ -1,0 +1,29 @@
+\section{Search}
+
+\subsection{Loader}
+
+Para la carga inicial del conjunto de datos, se desarrollará un módulo de carga consistente en scripts de Python que procesarán el archivo CSV, transformarán los datos en el formato requerido y utilizarán la funcionalidad de almacenamiento del cliente de Qdrant para indexar cada producto.
+
+\subsection{Preprocesamiento}
+
+El preprocesamiento de datos constituye una etapa fundamental para optimizar la calidad de las búsquedas. Este proceso incluye la limpieza y normalización de textos, la extracción de características relevantes de los productos, y la preparación de los datos para la generación de embeddings.
+
+\subsection{Cálculo de Embeddings densos y esparsos (Hybrid Search)}
+
+Este módulo constituye el núcleo del sistema de búsqueda vectorial. Se compone de:
+
+\begin{itemize}
+    \item \textbf{Base de datos vectorial}: Almacena productos y sus representaciones vectoriales (embeddings densos y esparsos), permitiendo búsquedas por similitud y coincidencia exacta.
+
+    \item \textbf{Cliente de acceso}: Componente que gestiona las operaciones de indexación y consulta a la base de datos. Implementa búsqueda híbrida siguiendo las prácticas recomendadas por \href{https://qdrant.tech/documentation/search-precision/reranking-hybrid-search/}{Qdrant}~\cite{Qdrant}, combinando embeddings densos (para capturar significado semántico) y esparsos (para coincidencias textuales precisas), permitiendo así obtener resultados relevantes tanto para consultas conceptuales como específicas.
+\end{itemize}
+
+La separación de este módulo facilita adaptaciones futuras, permitiendo reemplazar modelos de embeddings o migrar a soluciones alternativas sin impactar al resto del sistema.
+
+\subsection{Query}
+
+El sistema de consultas implementa algoritmos de búsqueda híbrida que combinan múltiples estrategias para maximizar la relevancia de los resultados. Las consultas se procesan tanto a nivel semántico como sintáctico, permitiendo una recuperación de información más precisa y contextualmente relevante.
+
+\subsection{CLI}
+
+Se implementará una interfaz de línea de comandos que permitirá interactuar con el sistema de búsqueda de manera directa, facilitando pruebas, depuración y uso programático del sistema.

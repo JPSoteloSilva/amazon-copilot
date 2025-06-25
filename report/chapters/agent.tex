@@ -1,0 +1,15 @@
+\section{Agent}
+
+\subsection{Diagrama (flujo)}
+
+% TODO: Agregar diagrama de flujo del agente de IA
+
+\subsection{Preferencias}
+
+El agente de IA mantiene un sistema de preferencias que permite personalizar las interacciones según el perfil y comportamiento del usuario. Estas preferencias se construyen dinámicamente a partir del historial de conversaciones y selecciones de productos.
+
+\subsection{Funcionamiento}
+
+Este componente implementa la funcionalidad conversacional y de recomendación del sistema utilizando \href{https://www.langchain.com/langgraph}{LangGraph}~\cite{LangGraph} y los modelos generativos de \href{https://openai.com/}{OpenAI}~\cite{OpenAI}. Utiliza la API de búsqueda híbrida como herramienta para acceder a los productos, permitiendo una arquitectura donde el diálogo con el usuario y la obtención de información están claramente separados.
+
+Para mantener el contexto de las interacciones, el sistema se integra con una base de datos que almacena el historial de conversaciones, permitiendo referencias a consultas anteriores y facilitando la personalización progresiva de las respuestas.
