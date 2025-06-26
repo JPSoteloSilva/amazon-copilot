@@ -1,29 +1,36 @@
 \section{Expansión}
 
-Esta sección describe las posibles mejoras y expansiones futuras del sistema Amazon Copilot.
+El presente capítulo traza una hoja de ruta para la evolución de Amazon Copilot, agrupando las iniciativas en tres grandes ejes: experiencia de usuario, calidad de las recomendaciones y robustez de la plataforma. Todas las ideas aquí expuestas son complementarias entre sí y pueden abordarse de forma incremental.
 
-\subsection{Streaming}
+\subsection{Streaming de respuestas}
 
-La implementación de streaming permitirá respuestas en tiempo real del agente de IA, mejorando significativamente la experiencia del usuario al proporcionar retroalimentación inmediata durante las conversaciones largas.
-
-\subsection{Database para registrar actividad de usuario y refinar recomendaciones y búsqueda}
-
-La incorporación de una base de datos dedicada al registro de actividad del usuario permitirá:
+Implementar \textit{streaming} permitiría que el asistente enviase la respuesta de forma incremental—token a token—mediante \textit{Server-Sent Events} o \textit{WebSockets}.  
+Esto traería dos ventajas principales:
 
 \begin{itemize}
-    \item Análisis de patrones de comportamiento
-    \item Refinamiento continuo de algoritmos de recomendación
-    \item Personalización avanzada de resultados de búsqueda
-    \item Métricas de rendimiento y satisfacción del usuario
+    \item \textbf{Percepción de inmediatez.} El usuario ve cómo el mensaje se «escribe» en pantalla, reduciendo la sensación de espera en consultas largas.
+    \item \textbf{Interrupción inteligente.} Al recibir tokens en tiempo real, el cliente puede ofrecer al usuario la opción de cancelar, reformular o profundizar sin tener que esperar al final de la generación.
 \end{itemize}
 
-\subsection{Embeddings de imágenes}
+\subsection{Base de datos de telemetría y \textit{feedback}}
 
-La integración de embeddings de imágenes expandiría las capacidades de búsqueda del sistema, permitiendo:
+Registrar la interacción de los usuarios en una base de datos operacional abre la puerta a un ciclo virtuoso de mejora continua:
 
 \begin{itemize}
-    \item Búsqueda visual por similitud de productos
-    \item Comparación automática de características visuales
-    \item Recomendaciones basadas en estilo y apariencia
-    \item Búsqueda multimodal combinando texto e imágenes
+    \item \textbf{Patrones de comportamiento.} Analizar clics, búsquedas y compras para detectar tendencias estacionales o hábitos de compra.
+    \item \textbf{Re-entrenamiento de modelos.} Utilizar los datos recogidos para ajustar la ponderación entre embeddings densos y esparcidos, o para afinar los \emph{prompts}.
+    \item \textbf{Personalización.} Mantener perfiles de preferencia (marcas, rangos de precio, colores) y aplicarlos en futuras consultas o recomendaciones.
+    \item \textbf{Métricas de producto.} Medir \emph{CTR}, tasa de conversión y tiempo medio de respuesta para orientar decisiones de negocio.
 \end{itemize}
+
+\subsection{Embeddings de imágenes y búsqueda multimodal}
+
+Extender el índice a vectores visuales dotaría al sistema de capacidades multimodales:
+
+\begin{itemize}
+    \item \textbf{Búsqueda inversa.} El usuario podría subir una foto o URL y recibir productos similares en forma, color o estilo.
+    \item \textbf{Recomendaciones estéticas.} Combinar señal visual y textual para sugerir artículos que «combinen» con el carrito actual (p.\,ej. sets de ropa).
+    \item \textbf{Comparación rápida.} Mostrar al usuario variaciones visuales (otros colores, modelos o diseños) sin depender solo de descripciones textuales.
+\end{itemize}
+
+
