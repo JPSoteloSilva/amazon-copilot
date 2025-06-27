@@ -1,29 +1,174 @@
 \section{Search}
 
-\subsection{Loader}
+Esta sección describe la implementación técnica del sistema de búsqueda híbrida, desde el procesamiento inicial de datos hasta la ejecución de consultas complejas con filtros y paginación.
 
-Para la carga inicial del conjunto de datos, se desarrollará un módulo de carga consistente en scripts de Python que procesarán el archivo CSV, transformarán los datos en el formato requerido y utilizarán la funcionalidad de almacenamiento del cliente de Qdrant para indexar cada producto.
+\subsection{Procesamiento de Datos Inicial}
 
-\subsection{Preprocesamiento}
+El sistema implementa un pipeline robusto de procesamiento de datos que transforma el conjunto de datos original de Amazon en un formato optimizado para búsqueda vectorial. El dataset inicial contiene aproximadamente 550,000 productos, muchos de los cuales presentaban inconsistencias en los datos, imágenes no funcionales o información que requería normalización y limpieza antes de poder ser utilizada efectivamente.
 
-El preprocesamiento de datos constituye una etapa fundamental para optimizar la calidad de las búsquedas. Este proceso incluye la limpieza y normalización de textos, la extracción de características relevantes de los productos, y la preparación de los datos para la generación de embeddings.
+\subsubsection{Limpieza y Normalización}
 
-\subsection{Cálculo de Embeddings densos y esparsos (Hybrid Search)}
-
-Este módulo constituye el núcleo del sistema de búsqueda vectorial. Se compone de:
+El proceso de limpieza se ejecuta a través de la función \texttt{clean\_data} en el módulo \texttt{utils.py}, implementando las siguientes transformaciones:
 
 \begin{itemize}
-    \item \textbf{Base de datos vectorial}: Almacena productos y sus representaciones vectoriales (embeddings densos y esparsos), permitiendo búsquedas por similitud y coincidencia exacta.
-
-    \item \textbf{Cliente de acceso}: Componente que gestiona las operaciones de indexación y consulta a la base de datos. Implementa búsqueda híbrida siguiendo las prácticas recomendadas por \href{https://qdrant.tech/documentation/search-precision/reranking-hybrid-search/}{Qdrant}~\cite{Qdrant}, combinando embeddings densos (para capturar significado semántico) y esparsos (para coincidencias textuales precisas), permitiendo así obtener resultados relevantes tanto para consultas conceptuales como específicas.
+    \item \textbf{Eliminación de valores nulos}: Se descartan productos sin campos esenciales (id, imagen, nombre, categoría, precios)
+    \item \textbf{Filtrado de datos inconsistentes}: Se eliminan registros con valoraciones inválidas como \texttt{Get}, \texttt{FREE} o que contengan símbolos no numéricos
+    \item \textbf{Normalización de valoraciones}: Conversión de conteos de ratings de formato string con comas a enteros
+    \item \textbf{Conversión monetaria}: Transformación automática de precios en rupias indias (INR) a dólares estadounidenses usando tasa de cambio fija
+    \item \textbf{Validación de URLs de imágenes}: Verificación concurrente de la accesibilidad de las imágenes de productos
 \end{itemize}
 
-La separación de este módulo facilita adaptaciones futuras, permitiendo reemplazar modelos de embeddings o migrar a soluciones alternativas sin impactar al resto del sistema.
+\subsection{Base de Datos Vectorial: Qdrant}
 
-\subsection{Query}
+La elección de Qdrant como base de datos vectorial se fundamenta en sus capacidades avanzadas para búsqueda híbrida y su arquitectura optimizada para aplicaciones de recuperación de información.
 
-El sistema de consultas implementa algoritmos de búsqueda híbrida que combinan múltiples estrategias para maximizar la relevancia de los resultados. Las consultas se procesan tanto a nivel semántico como sintáctico, permitiendo una recuperación de información más precisa y contextualmente relevante.
+\subsubsection{Justificación Técnica}
 
-\subsection{CLI}
+Qdrant ofrece ventajas específicas que fueron determinantes para la implementación:
 
-Se implementará una interfaz de línea de comandos que permitirá interactuar con el sistema de búsqueda de manera directa, facilitando pruebas, depuración y uso programático del sistema.
+\begin{itemize}
+    \item \textbf{Búsqueda híbrida nativa}: Soporte integrado para combinar embeddings densos y esparsos en una sola consulta
+    \item \textbf{Modelos de embeddings integrados}: Utilización de FastEmbed para generar representaciones vectoriales sin dependencias externas
+    \item \textbf{Filtrado avanzado}: Capacidad de aplicar filtros complejos por categorías, rangos de precios y otros atributos sin impacto significativo en el rendimiento
+    \item \textbf{Fácil de usar}: Interfaz intuitiva y documentación clara que facilita la implementación y mantenimiento.
+\end{itemize}
+
+\subsubsection{Configuración de la Colección}
+
+La colección se configura con parámetros específicos para optimizar el rendimiento de búsqueda:
+
+\begin{itemize}
+    \item \textbf{Vectores densos}: Dimensión 384 con distancia coseno para capturar similitud semántica
+    \item \textbf{Vectores esparsos}: Implementación BM25 para coincidencias textuales exactas
+    \item \textbf{Índices de payload}: Indexación automática de campos categóricos para filtrado eficiente
+\end{itemize}
+
+\subsection{Modelos de Embeddings}
+
+El sistema implementa una arquitectura dual de embeddings que combina representaciones densas y esparsas para maximizar la calidad de los resultados de búsqueda.
+
+\subsubsection{Embeddings Densos: Sentence-Transformers}
+
+Los embeddings densos utilizan el modelo \texttt{sentence-transformers/all-MiniLM-L6-v2}, seleccionado por su balance óptimo entre calidad y eficiencia:
+
+\begin{itemize}
+    \item \textbf{Dimensionalidad}: 384 dimensiones que capturan representaciones semánticas ricas con un balance entre precisión, eficiencia y tamaño de los vectores.
+    \item \textbf{Entrenamiento}: Pre-entrenado en grandes corpus multilingües.
+    \item \textbf{Ventajas}: Excelente para capturar similitudes conceptuales, sinónimos y relaciones semánticas.
+\end{itemize}
+
+El proceso de generación de embeddings densos procesa tanto el título como la descripción del producto, creando una representación vectorial que captura el significado semántico completo del artículo.
+
+\subsubsection{Embeddings Esparsos: BM25}
+
+Los embeddings esparsos implementan el algoritmo BM25 a través del modelo \texttt{Qdrant/bm25}, creando representaciones vectoriales donde cada dimensión corresponde a un token específico del diccionario de la colección.
+
+\subsubsection{Estructura del Vector Esparso}
+
+Un embedding esparso se representa como un conjunto de pares (índice, valor) donde:
+
+\begin{itemize}
+    \item \textbf{Índice}: Posición del token en el diccionario global de Qdrant para la colección
+    \item \textbf{Valor}: Score BM25 que combina la frecuencia del término (TF) con la frecuencia inversa de documento (IDF)
+    \item \textbf{Esparsidad}: Solo se almacenan dimensiones con valores no-cero, optimizando el espacio de almacenamiento
+\end{itemize}
+
+\subsubsection{Cálculo de Relevancia}
+
+El score BM25 para cada token se calcula mediante la fórmula:
+
+\begin{itemize}
+    \item \textbf{Componente TF}: Frecuencia del término normalizada por la longitud del documento usando parámetros k1=1.2 y b=0.75
+    \item \textbf{Componente IDF}: Calculado a nivel de colección basado en la frecuencia del término en todos los documentos
+    \item \textbf{Actualización dinámica}: Los valores IDF se recalculan automáticamente cuando se añaden nuevos productos a la colección
+\end{itemize}
+
+Esta implementación permite:
+
+\begin{itemize}
+    \item \textbf{Coincidencias exactas}: Identificación precisa de términos específicos en títulos y descripciones
+    \item \textbf{Relevancia estadística}: Ponderación basada en la rareza del término en la colección completa
+    \item \textbf{Robustez}: Resistencia a variaciones en la formulación de consultas
+    \item \textbf{Eficiencia}: Almacenamiento optimizado que solo mantiene tokens relevantes
+\end{itemize}
+
+\subsection{Búsqueda Híbrida}
+
+La implementación de búsqueda híbrida constituye el núcleo del sistema, combinando las fortalezas de ambos tipos de embeddings para proporcionar resultados superiores.
+
+\subsubsection{Principio de Funcionamiento}
+
+La búsqueda híbrida opera ejecutando simultáneamente dos consultas independientes sobre la misma colección de productos:
+
+\begin{itemize}
+    \item \textbf{Consulta densa}: Utiliza el embedding denso de la query para encontrar productos semánticamente similares mediante búsqueda por similitud coseno
+    \item \textbf{Consulta esparsa}: Aplica el embedding esparso BM25 de la query para identificar productos con coincidencias textuales exactas
+    \item \textbf{Ejecución paralela}: Ambas consultas se procesan simultáneamente en Qdrant, optimizando el tiempo de respuesta
+    \item \textbf{Aplicación de filtros}: Los filtros de categoría y precio se aplican de manera idéntica a ambas consultas
+\end{itemize}
+
+\subsubsection{Ventajas de la Aproximación Dual}
+
+Esta estrategia dual permite capturar diferentes aspectos de la relevancia:
+
+\begin{itemize}
+    \item \textbf{Cobertura semántica}: Los embeddings densos identifican productos conceptualmente relacionados aunque no compartan términos exactos
+    \item \textbf{Precisión léxica}: Los embeddings esparsos garantizan que productos con términos clave específicos aparezcan en los resultados
+    \item \textbf{Compensación mutua}: Cuando una aproximación falla, la otra puede proporcionar resultados relevantes
+    \item \textbf{Robustez ante consultas}: El sistema funciona eficazmente tanto para búsquedas conceptuales como específicas
+\end{itemize}
+
+\subsubsection{Algoritmo de Fusión}
+
+El sistema implementa una estrategia de fusión que opera en dos niveles:
+
+\begin{itemize}
+    \item \textbf{Nivel de puntuación}: Combinación ponderada de scores densos y esparsos usando Reciprocal Rank Fusion (RRF)
+    \item \textbf{Normalización}: Ajuste de escalas entre diferentes tipos de scores para comparación equitativa
+\end{itemize}
+
+\subsection{Sistema de Filtrado}
+
+El sistema implementa filtros que se aplican tanto a las consultas densas como esparsas durante la búsqueda híbrida.
+
+\subsubsection{Filtros Disponibles}
+
+\begin{itemize}
+    \item \textbf{Categoría principal}: Filtrado por categorías como Electronics, Clothing, Home, etc.
+    \item \textbf{Subcategoría}: Filtrado de segundo nivel (requiere categoría principal definida)
+    \item \textbf{Rango de precios}: Filtros por precio mínimo y/o máximo en dólares
+\end{itemize}
+
+\subsubsection{Implementación}
+
+Los filtros utilizan los índices automáticos de Qdrant sobre los campos de payload, aplicándose mediante operadores lógicos AND para combinar múltiples condiciones de filtrado.
+
+\subsection{Paginación}
+
+La implementación de paginación está optimizada para mantener rendimiento consistente independientemente del tamaño del conjunto de resultados.
+
+\subsubsection{Implementación}
+
+El sistema utiliza paginación basada en offset con optimizaciones específicas:
+
+\begin{itemize}
+    \item \textbf{Offset y limit}: Parámetros estándar para control granular de resultados
+    \item \textbf{Validación de parámetros}: Verificación de valores positivos y rangos válidos
+    \item \textbf{Metadatos de paginación}: Información adicional sobre total de resultados y páginas disponibles
+\end{itemize}
+
+\subsection{Interfaz de Línea de Comandos}
+
+La CLI proporciona herramientas para gestión de datos y testing del sistema, implementada con Typer y Rich para hacer uso del sistema de búsqueda desde la terminal.
+
+\subsubsection{Comandos Principales}
+
+\begin{itemize}
+    \item \textbf{create-collection}: Creación de colecciones con configuración automática
+    \item \textbf{load-products}: Carga masiva de productos desde CSV
+    \item \textbf{search-products}: Búsqueda híbrida con filtros y paginación
+    \item \textbf{delete-collection}: Eliminación de colecciones
+    \item \textbf{test-connection}: Verificación de conectividad con Qdrant
+\end{itemize}
+
+Esta implementación integral del sistema de búsqueda proporciona una base sólida para operaciones de recuperación de información eficientes y escalables, combinando técnicas modernas de NLP con optimizaciones específicas para comercio electrónico.
