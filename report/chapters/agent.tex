@@ -1,15 +1,200 @@
 \section{Agent}
 
-\subsection{Diagrama (flujo)}
+Esta sección describe la implementación técnica del agente conversacional de IA, desde la arquitectura del grafo de estados hasta la gestión de preferencias y presentación de productos.
 
-% TODO: Agregar diagrama de flujo del agente de IA
+\subsection{Arquitectura del Grafo de Estados}
 
-\subsection{Preferencias}
+El agente conversacional está implementado utilizando LangGraph, que proporciona una arquitectura basada en grafos de estados para manejar conversaciones complejas con múltiples etapas de procesamiento.
 
-El agente de IA mantiene un sistema de preferencias que permite personalizar las interacciones según el perfil y comportamiento del usuario. Estas preferencias se construyen dinámicamente a partir del historial de conversaciones y selecciones de productos.
+\subsubsection{Estado del Grafo}
 
-\subsection{Funcionamiento}
+El sistema mantiene un estado global (\texttt{GraphState}) que persiste a lo largo de toda la conversación:
 
-Este componente implementa la funcionalidad conversacional y de recomendación del sistema utilizando \href{https://www.langchain.com/langgraph}{LangGraph}~\cite{LangGraph} y los modelos generativos de \href{https://openai.com/}{OpenAI}~\cite{OpenAI}. Utiliza la API de búsqueda híbrida como herramienta para acceder a los productos, permitiendo una arquitectura donde el diálogo con el usuario y la obtención de información están claramente separados.
+\begin{itemize}
+    \item \textbf{Historial de conversación}: Lista de mensajes intercambiados entre usuario y asistente
+    \item \textbf{Preferencias del usuario}: Estructura que almacena criterios de búsqueda recolectados dinámicamente
+    \item \textbf{Productos encontrados}: Lista de productos resultantes de la búsqueda híbrida
+\end{itemize}
 
-Para mantener el contexto de las interacciones, el sistema se integra con una base de datos que almacena el historial de conversaciones, permitiendo referencias a consultas anteriores y facilitando la personalización progresiva de las respuestas.
+\subsubsection{Nodos del Grafo}
+
+La arquitectura implementa tres nodos principales que procesan diferentes aspectos de la conversación:
+
+\begin{itemize}
+    \item \textbf{collect\_preferences}: Recolecta y refina las preferencias del usuario mediante diálogo natural
+    \item \textbf{search\_products}: Ejecuta búsquedas híbridas utilizando las preferencias recolectadas
+    \item \textbf{present\_products}: Genera presentaciones personalizadas de los productos encontrados
+\end{itemize}
+
+\subsection{Recolección de Preferencias}
+
+El sistema implementa un mecanismo sofisticado para extraer preferencias del usuario a través de conversación natural, utilizando técnicas de procesamiento de lenguaje natural.
+
+\subsubsection{Estructura de Preferencias}
+
+Las preferencias del usuario se modelan mediante la clase \texttt{UserPreferences}:
+
+\begin{itemize}
+    \item \textbf{Query}: Consulta textual que describe el tipo de producto deseado
+    \item \textbf{Categoría principal}: Categoría de alto nivel (Electronics, Clothing, Home, etc.)
+    \item \textbf{Rango de precios}: Límites mínimo y máximo en dólares estadounidenses
+    \item \textbf{Atributos específicos}: Color y marca preferidos por el usuario
+\end{itemize}
+
+\subsubsection{Validación de Suficiencia}
+
+El sistema implementa una función de validación (\texttt{has\_sufficient\_preferences}) que determina cuándo se han recolectado suficientes datos para ejecutar una búsqueda efectiva:
+
+\begin{itemize}
+    \item \textbf{Campos mínimos}: Requiere al menos 3 campos completados de las 6 opciones disponibles
+    \item \textbf{Campo obligatorio}: La query textual es siempre requerida para iniciar búsquedas
+    \item \textbf{Validación dinámica}: Evalúa la completitud en cada iteración del diálogo
+\end{itemize}
+
+\subsubsection{Prompts Especializados}
+
+La recolección utiliza prompts ingeniería específicamente diseñados para extraer información estructurada:
+
+\begin{itemize}
+    \item \textbf{Manejo multiidioma}: Respuestas en el idioma del usuario, datos almacenados en inglés
+    \item \textbf{Inferencia categórica}: Mapeo automático de descripciones a categorías válidas
+    \item \textbf{Preservación de contexto}: Mantiene preferencias previamente recolectadas
+    \item \textbf{Resolución de conflictos}: Solicita clarificación ante información contradictoria
+\end{itemize}
+
+\subsubsection{Limitaciones del Sistema Multiidioma}
+
+A pesar de las especificaciones detalladas en los prompts, el sistema presenta limitaciones en el manejo multiidioma:
+
+\begin{itemize}
+    \item \textbf{Inconsistencia en traducción}: La recolección de preferencias no siempre almacena los datos en inglés como se especifica en el prompt, lo que puede causar desajustes con la base de datos de productos
+    \item \textbf{Limitaciones del modelo}: El modelo GPT-4.1-nano actual no siempre sigue consistentemente las instrucciones de traducción automática
+    \item \textbf{Posible solución}: Un modelo más expresivo y con mayor capacidad de seguimiento de instrucciones podría resolver estos problemas de consistencia idiomática
+\end{itemize}
+
+\subsection{Integración con Búsqueda}
+
+El agente utiliza el sistema de búsqueda híbrida como herramienta subyacente para obtener productos relevantes basados en las preferencias recolectadas.
+
+\subsubsection{Construcción de Consultas}
+
+El nodo \texttt{search\_products} construye consultas optimizadas combinando múltiples campos de preferencias:
+
+\begin{itemize}
+    \item \textbf{Query base}: Utiliza la consulta textual principal del usuario
+    \item \textbf{Enriquecimiento}: Añade color y marca cuando están disponibles
+    \item \textbf{Filtros aplicados}: Categoría principal y rangos de precio se aplican como filtros
+    \item \textbf{Límite de resultados}: Configurado para presentar 3 productos por defecto
+\end{itemize}
+
+\subsubsection{Manejo de Errores}
+
+El sistema implementa estrategias robustas para manejar casos donde la búsqueda no produce resultados:
+
+\begin{itemize}
+    \item \textbf{Validación previa}: Verifica que existe una query antes de ejecutar búsquedas
+    \item \textbf{Respuestas alternativas}: Proporciona mensajes informativos cuando no hay productos
+    \item \textbf{Recuperación graceful}: Mantiene el flujo conversacional ante errores técnicos
+\end{itemize}
+
+\subsection{Presentación de Productos}
+
+La presentación de productos utiliza un sistema de generación de texto especializado que adapta el contenido según las preferencias del usuario y características de los productos encontrados.
+
+\subsubsection{Generación Contextual}
+
+El nodo \texttt{present\_products} genera descripciones personalizadas utilizando:
+
+\begin{itemize}
+    \item \textbf{Contexto de preferencias}: Incluye los criterios específicos del usuario
+    \item \textbf{Datos de productos}: Información detallada de cada artículo encontrado
+    \item \textbf{Orden preservado}: Mantiene la secuencia de relevancia de la búsqueda
+    \item \textbf{Alineación con necesidades}: Explica cómo cada producto satisface los criterios
+\end{itemize}
+
+\subsubsection{Formato de Presentación}
+
+Las presentaciones siguen una estructura consistente que optimiza la experiencia del usuario:
+
+\begin{itemize}
+    \item \textbf{Introducción general}: Mensaje amigable que resume las preferencias identificadas
+    \item \textbf{Descripciones individuales}: Análisis detallado de cada producto con características clave
+    \item \textbf{Información de precios}: Precios actuales y descuentos cuando aplican
+    \item \textbf{Valoraciones sociales}: Ratings y número de reseñas para validación social
+\end{itemize}
+
+\subsection{Configuración y Parámetros}
+
+El sistema utiliza un conjunto de parámetros configurables que optimizan el comportamiento del agente para diferentes escenarios de uso.
+
+\subsubsection{Configuración de OpenAI}
+
+\begin{itemize}
+    \item \textbf{Modelo}: GPT-4.1-nano para balance entre calidad y eficiencia
+    \item \textbf{Temperatura}: 0.0 para respuestas determinísticas y consistentes
+    \item \textbf{Structured outputs}: Utiliza Pydantic para validación automática de respuestas
+\end{itemize}
+
+\subsubsection{Parámetros de Conversación}
+
+\begin{itemize}
+    \item \textbf{Contexto de mensajes}: Mantiene los últimos 10 mensajes para contexto relevante
+    \item \textbf{Límite de recursión}: Máximo 10 iteraciones para prevenir bucles infinitos
+    \item \textbf{Gestión de hilos}: Identificador único para mantener contexto conversacional
+\end{itemize}
+
+\subsection{Continuidad Conversacional y Refinamiento}
+
+El sistema mantiene el contexto completo de la conversación, permitiendo refinamientos iterativos de búsquedas basados en interacciones previas.
+
+\subsubsection{Mantenimiento de Contexto}
+
+Una vez que se ha realizado una búsqueda inicial y se han presentado productos al usuario, el sistema permite:
+
+\begin{itemize}
+    \item \textbf{Refinamiento de preferencias}: El usuario puede modificar criterios específicos (como rango de precios) manteniendo el resto de preferencias previamente establecidas
+    \item \textbf{Búsquedas iterativas}: Nuevas consultas utilizan el contexto previo para generar resultados más refinados
+    \item \textbf{Preservación selectiva}: Solo se actualizan los campos de preferencias que el usuario modifica explícitamente
+    \item \textbf{Historial persistente}: El sistema mantiene el registro completo de la conversación para referencias futuras
+\end{itemize}
+
+\subsubsection{Ejemplo de Refinamiento}
+
+El flujo típico de refinamiento funciona de la siguiente manera:
+
+\begin{itemize}
+    \item \textbf{Búsqueda inicial}: Usuario solicita "auriculares inalámbricos" con presupuesto de \$50-100
+    \item \textbf{Presentación de resultados}: Sistema muestra 3 productos relevantes
+    \item \textbf{Refinamiento del usuario}: "Muéstrame opciones más baratas, hasta \$50"
+    \item \textbf{Nueva búsqueda contextual}: Sistema mantiene "auriculares inalámbricos" pero actualiza price\_max a \$50
+    \item \textbf{Resultados refinados}: Nuevos productos que satisfacen los criterios actualizados
+\end{itemize}
+
+Esta capacidad de refinamiento iterativo mejora significativamente la experiencia del usuario al permitir ajustes precisos sin necesidad de reiniciar la conversación completa.
+
+\subsection{Flujo de Ejecución}
+
+El agente implementa un flujo de ejecución determinístico que garantiza una experiencia conversacional coherente y eficiente.
+
+\subsubsection{Enrutamiento Condicional}
+
+La función \texttt{route\_after\_collection} implementa lógica de decisión que determina el siguiente paso basado en el estado de las preferencias:
+
+\begin{itemize}
+    \item \textbf{Preferencias insuficientes}: Continúa en modo recolección para obtener más información
+    \item \textbf{Preferencias suficientes}: Procede a ejecutar búsqueda de productos
+    \item \textbf{Evaluación dinámica}: Reevalúa en cada iteración del diálogo
+\end{itemize}
+
+\subsubsection{Manejo de Excepciones}
+
+El sistema implementa captura robusta de errores que mantiene la funcionalidad ante fallos:
+
+\begin{itemize}
+    \item \textbf{Errores de API}: Manejo graceful de fallos en llamadas a OpenAI
+    \item \textbf{Errores de búsqueda}: Recuperación ante problemas con el motor de búsqueda
+    \item \textbf{Mensajes informativos}: Comunicación clara de problemas al usuario
+    \item \textbf{Continuidad conversacional}: Mantiene el contexto ante errores técnicos
+\end{itemize}
+
+Esta implementación integral del agente conversacional proporciona una experiencia de usuario natural y eficiente, combinando técnicas avanzadas de procesamiento de lenguaje natural con integración robusta al sistema de búsqueda híbrida.
