@@ -2,6 +2,8 @@
 
 A vector-based search system for Amazon product data using Qdrant for similarity search and sentence-transformers for embedding generation.
 
+**Academic Project**: This project was developed for the course "Recuperación de Información y Recomendaciones en la Web" at Facultad de Ingeniería, Universidad de la República. Course information: https://eva.fing.edu.uy/course/view.php?id=821
+
 ## Features
 
 - Semantic search for Amazon products

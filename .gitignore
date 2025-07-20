@@ -98,3 +98,7 @@ Thumbs.db
 
 # LaTeX
 out/
+*.aux
+*.out
+*.toc
+*.gz

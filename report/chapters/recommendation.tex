@@ -1,0 +1,17 @@
+\section{Recommendation}
+El sistema de recomendación de Amazon Copilot tiene como objetivo asistir al usuario en la selección de productos complementarios o alternativos a los que ya ha añadido a su carrito. Aprovechando técnicas avanzadas de inteligencia artificial y búsqueda híbrida, el sistema analiza el contenido actual del carrito y genera sugerencias personalizadas en tiempo real. A continuación se describe el flujo general y el funcionamiento interno del módulo de recomendación.
+
+\subsection{Estructura (flujo)}
+
+El flujo puede resumirse en cuatro pasos sencillos:
+
+\begin{enumerate}
+    \item \textbf{Envío del carrito.} El \textit{frontend} hace una petición a un \textit{endpoint} y envía la lista de productos que se encuentran actualmente en el carrito al servicio de recomendaciones.
+    \item \textbf{Creación de ideas.} A partir de esos productos se generan palabras clave que describen posibles artículos complementarios. Esto se hace pasándole la lista de productos a OpenAI, que devuelve una lista de artículos sugeridos.
+    \item \textbf{Búsqueda de productos.} Con esta lista se realiza una consulta a Qdrant para obtener, para cada sugerencia, el artículo más similar disponible en nuestro sistema.
+    \item \textbf{Respuesta.} El servicio devuelve una lista de los productos más similares a los sugeridos por OpenAI que existen en nuestro catálogo.
+\end{enumerate}
+
+\subsection{Funcionamiento}
+
+El sistema de recomendación analiza los productos seleccionados en el carrito para sugerir artículos complementarios o alternativos. Opera automáticamente al visualizar el carrito, generando recomendaciones basadas en productos frecuentemente adquiridos conjuntamente y alternativas similares. Si se elimina o agrega un producto al carrito esta lista de sugerencias se refresca.
